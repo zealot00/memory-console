@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import fs from "fs";
-import path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
-const MEMORY_FILE = "/home/zealot/.openclaw/workspace/memory-console-data.json";
+// 本地存储路径
+const MEMORY_FILE = process.env.MEMORY_FILE || "/home/zealot/.openclaw/workspace/memory-console-data.json";
 
-// Aliyun server config
-const ALIYUN_HOST = "8.140.195.192";
-const ALIYUN_USER = "zealot";
-const ALIYUN_KEY = "/home/zealot/keys/aliyun/id_rsa";
-const ALIYUN_PATH = "/home/zealot/.openclaw/workspace/memory-console-data.json";
+// 远程服务器配置 (使用环境变量)
+const ALIYUN_HOST = process.env.ALIYUN_HOST || "YOUR_ALIYUN_HOST";
+const ALIYUN_USER = process.env.ALIYUN_USER || "YOUR_ALIYUN_USER";
+const ALIYUN_KEY = process.env.ALIYUN_KEY || "/path/to/your/private/key";
+const ALIYUN_PATH = process.env.ALIYUN_PATH || "/remote/path/to/memory-data.json";
 
 interface Memory {
   _id: string;
@@ -114,7 +114,7 @@ export async function PATCH(request: NextRequest) {
   const action = body.action;
   
   if (action === "sync-to-remote") {
-    // 同步到阿里云
+    // 同步到远程服务器
     try {
       const memories = loadMemories();
       const jsonData = JSON.stringify(memories, null, 2);
@@ -123,25 +123,25 @@ export async function PATCH(request: NextRequest) {
       const tempFile = "/tmp/memory-console-sync.json";
       fs.writeFileSync(tempFile, jsonData);
       
-      // 使用 scp 复制到阿里云
+      // 使用 scp 复制到远程服务器
       const cmd = `scp -i ${ALIYUN_KEY} ${tempFile} ${ALIYUN_USER}@${ALIYUN_HOST}:${ALIYUN_PATH}`;
       await execAsync(cmd);
       
       // 清理临时文件
       fs.unlinkSync(tempFile);
       
-      return NextResponse.json({ success: true, message: "已同步到阿里云" });
+      return NextResponse.json({ success: true, message: "已同步到远程服务器" });
     } catch (error: any) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
   }
   
   if (action === "sync-from-remote") {
-    // 从阿里云同步
+    // 从远程服务器同步
     try {
       const tempFile = "/tmp/memory-console-remote.json";
       
-      // 从阿里云下载
+      // 从远程服务器下载
       const cmd = `scp -i ${ALIYUN_KEY} ${ALIYUN_USER}@${ALIYUN_HOST}:${ALIYUN_PATH} ${tempFile}`;
       await execAsync(cmd);
       
@@ -151,7 +151,7 @@ export async function PATCH(request: NextRequest) {
         const memories = JSON.parse(data);
         saveMemories(memories);
         fs.unlinkSync(tempFile);
-        return NextResponse.json({ success: true, message: "已从阿里云同步", count: memories.length });
+        return NextResponse.json({ success: true, message: "已从远程服务器同步", count: memories.length });
       }
       
       return NextResponse.json({ success: false, error: "远程文件不存在" }, { status: 404 });
