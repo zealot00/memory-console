@@ -1,0 +1,81 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// 记忆模型
+model Memory {
+  id          String   @id @default(cuid())
+  title       String
+  content     String   @db.Text
+  source      String   @default("memory-console")
+  owner       String   @default("ai") // "ai" | "human"
+  status      String   @default("active") // "active" | "archived" | "blocked"
+  namespace   String   @default("default") // 命名空间隔离
+  tags        String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([namespace])
+  @@index([owner])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// 技能模型
+model Skill {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  description   String   @db.Text
+  schemaPayload Json     @default("{}") // JSON Schema 格式的技能定义
+  version       Int      @default(1)
+  authorInstance String  @default("system") // 来源实例
+  isPublic      Boolean  @default(false) // 是否公共技能
+  status        String   @default("draft") // "draft" | "approved" | "rejected"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+  @@index([isPublic])
+}
+
+// 审计日志模型
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String   // 操作类型: create, read, update, delete, sync
+  entityType  String   // 实体类型: memory, skill
+  entityId    String?  // 实体 ID
+  namespace   String?  // 涉及的命名空间
+  instanceId  String?  // 操作来源的 Agent 实例
+  ipAddress   String?  @default("unknown")
+  tokenId     String?  // 使用的 token ID
+  details     Json?    @default("{}") // 额外详情
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([namespace])
+  @@index([createdAt])
+}
+
+// API Token 模型
+model ApiToken {
+  id          String   @id @default(cuid())
+  name        String   // Token 名称/用途
+  token       String   @unique // Token 值 (存储 hash)
+  namespace   String   @default("default") // 所属命名空间
+  permissions String[] @default([]) // 权限: read, write, admin
+  expiresAt   DateTime? // 过期时间
+  lastUsedAt  DateTime? // 最后使用时间
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([token])
+  @@index([namespace])
+}

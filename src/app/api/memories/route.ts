@@ -1,164 +1,124 @@
 import { NextRequest, NextResponse } from "next/server";
-import fs from "fs";
-import { exec } from "child_process";
-import { promisify } from "util";
+import { prisma } from "@/lib/prisma";
 
-const execAsync = promisify(exec);
-
-// 本地存储路径
-const MEMORY_FILE = process.env.MEMORY_FILE || "/home/zealot/.openclaw/workspace/memory-console-data.json";
-
-// 远程服务器配置 (使用环境变量)
-const ALIYUN_HOST = process.env.ALIYUN_HOST || "YOUR_ALIYUN_HOST";
-const ALIYUN_USER = process.env.ALIYUN_USER || "YOUR_ALIYUN_USER";
-const ALIYUN_KEY = process.env.ALIYUN_KEY || "/path/to/your/private/key";
-const ALIYUN_PATH = process.env.ALIYUN_PATH || "/remote/path/to/memory-data.json";
-
-interface Memory {
-  _id: string;
-  title: string;
-  content: string;
-  source: string;
-  owner: "ai" | "human";
-  tags: string[];
-  createdAt: number;
-  updatedAt: number;
-}
-
-function loadMemories(): Memory[] {
+// GET /api/memories - 获取所有记忆（支持分页和过滤）
+export async function GET(request: NextRequest) {
   try {
-    if (fs.existsSync(MEMORY_FILE)) {
-      const data = fs.readFileSync(MEMORY_FILE, "utf-8");
-      return JSON.parse(data);
+    const searchParams = request.nextUrl.searchParams;
+    const namespace = searchParams.get("namespace") || "default";
+    const owner = searchParams.get("owner");
+    const status = searchParams.get("status") || "active";
+    const search = searchParams.get("search");
+    const tags = searchParams.get("tags")?.split(",").filter(Boolean);
+    const page = parseInt(searchParams.get("page") || "1");
+    const pageSize = parseInt(searchParams.get("pageSize") || "20");
+
+    const where: any = {
+      namespace,
+      status,
+    };
+
+    if (owner) where.owner = owner;
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: "insensitive" } },
+        { content: { contains: search, mode: "insensitive" } },
+      ];
     }
-  } catch (e) {
-    console.error("Error loading memories:", e);
-  }
-  return [];
-}
+    if (tags && tags.length > 0) {
+      where.tags = { hasSome: tags };
+    }
 
-function saveMemories(memories: Memory[]) {
-  try {
-    fs.writeFileSync(MEMORY_FILE, JSON.stringify(memories, null, 2));
-  } catch (e) {
-    console.error("Error saving memories:", e);
-  }
-}
+    const [memories, total] = await Promise.all([
+      prisma.memory.findMany({
+        where,
+        orderBy: { updatedAt: "desc" },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.memory.count({ where }),
+    ]);
 
-// GET /api/memories - 获取所有记忆
-export async function GET() {
-  const memories = loadMemories();
-  return NextResponse.json(memories);
+    return NextResponse.json({
+      items: memories,
+      page,
+      pageSize,
+      total,
+      totalPages: Math.ceil(total / pageSize),
+    });
+  } catch (error) {
+    console.error("Error fetching memories:", error);
+    return NextResponse.json({ error: "Failed to fetch memories" }, { status: 500 });
+  }
 }
 
 // POST /api/memories - 添加记忆
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const memories = loadMemories();
-  const now = Date.now();
-  
-  const newMemory: Memory = {
-    _id: `mem_${now}`,
-    title: body.title,
-    content: body.content,
-    source: body.source,
-    owner: body.owner,
-    tags: body.tags,
-    createdAt: now,
-    updatedAt: now,
-  };
-  
-  memories.push(newMemory);
-  saveMemories(memories);
-  
-  return NextResponse.json({ _id: newMemory._id });
+  try {
+    const body = await request.json();
+    
+    const memory = await prisma.memory.create({
+      data: {
+        title: body.title,
+        content: body.content,
+        source: body.source || "memory-console",
+        owner: body.owner || "ai",
+        status: "active",
+        namespace: body.namespace || "default",
+        tags: body.tags || [],
+      },
+    });
+
+    return NextResponse.json(memory, { status: 201 });
+  } catch (error) {
+    console.error("Error creating memory:", error);
+    return NextResponse.json({ error: "Failed to create memory" }, { status: 500 });
+  }
 }
 
-// PUT /api/memories - 更新记忆
+// PUT /api/memories - 批量更新或单个更新
 export async function PUT(request: NextRequest) {
-  const body = await request.json();
-  const memories = loadMemories();
-  const index = memories.findIndex((m) => m._id === body.id);
-  
-  if (index !== -1) {
-    memories[index] = {
-      ...memories[index],
-      title: body.title,
-      content: body.content,
-      tags: body.tags,
-      updatedAt: Date.now(),
-    };
-    saveMemories(memories);
+  try {
+    const body = await request.json();
+
+    if (body.id) {
+      // 单个更新
+      const memory = await prisma.memory.update({
+        where: { id: body.id },
+        data: {
+          ...(body.title && { title: body.title }),
+          ...(body.content && { content: body.content }),
+          ...(body.tags && { tags: body.tags }),
+          ...(body.status && { status: body.status }),
+        },
+      });
+      return NextResponse.json(memory);
+    }
+
+    return NextResponse.json({ error: "ID required" }, { status: 400 });
+  } catch (error) {
+    console.error("Error updating memory:", error);
+    return NextResponse.json({ error: "Failed to update memory" }, { status: 500 });
   }
-  
-  return NextResponse.json({ success: true });
 }
 
 // DELETE /api/memories - 删除记忆
 export async function DELETE(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const id = searchParams.get("id");
-  
-  if (id) {
-    const memories = loadMemories();
-    const filtered = memories.filter((m) => m._id !== id);
-    saveMemories(filtered);
-  }
-  
-  return NextResponse.json({ success: true });
-}
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
 
-// PATCH /api/memories - 同步到远程服务器
-export async function PATCH(request: NextRequest) {
-  const body = await request.json();
-  const action = body.action;
-  
-  if (action === "sync-to-remote") {
-    // 同步到远程服务器
-    try {
-      const memories = loadMemories();
-      const jsonData = JSON.stringify(memories, null, 2);
-      
-      // 先写入本地临时文件
-      const tempFile = "/tmp/memory-console-sync.json";
-      fs.writeFileSync(tempFile, jsonData);
-      
-      // 使用 scp 复制到远程服务器
-      const cmd = `scp -i ${ALIYUN_KEY} ${tempFile} ${ALIYUN_USER}@${ALIYUN_HOST}:${ALIYUN_PATH}`;
-      await execAsync(cmd);
-      
-      // 清理临时文件
-      fs.unlinkSync(tempFile);
-      
-      return NextResponse.json({ success: true, message: "已同步到远程服务器" });
-    } catch (error: any) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    if (!id) {
+      return NextResponse.json({ error: "ID required" }, { status: 400 });
     }
+
+    await prisma.memory.delete({
+      where: { id },
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting memory:", error);
+    return NextResponse.json({ error: "Failed to delete memory" }, { status: 500 });
   }
-  
-  if (action === "sync-from-remote") {
-    // 从远程服务器同步
-    try {
-      const tempFile = "/tmp/memory-console-remote.json";
-      
-      // 从远程服务器下载
-      const cmd = `scp -i ${ALIYUN_KEY} ${ALIYUN_USER}@${ALIYUN_HOST}:${ALIYUN_PATH} ${tempFile}`;
-      await execAsync(cmd);
-      
-      // 读取并保存
-      if (fs.existsSync(tempFile)) {
-        const data = fs.readFileSync(tempFile, "utf-8");
-        const memories = JSON.parse(data);
-        saveMemories(memories);
-        fs.unlinkSync(tempFile);
-        return NextResponse.json({ success: true, message: "已从远程服务器同步", count: memories.length });
-      }
-      
-      return NextResponse.json({ success: false, error: "远程文件不存在" }, { status: 404 });
-    } catch (error: any) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-    }
-  }
-  
-  return NextResponse.json({ success: false, error: "未知操作" }, { status: 400 });
 }
