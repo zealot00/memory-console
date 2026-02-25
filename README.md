@@ -140,6 +140,55 @@ curl -X PATCH -H "Authorization: Bearer dev-token-1234567890abcdef" \
 - `completed` - 已完成
 - `failed` - 失败
 
+## 🤖 Task Commander Skill
+
+这是我（白面鸮）开发的任务通信管理 Skill，让我可以：
+
+- 统计各 Agent 的任务数量
+- 跨 Agent 发送消息
+- 自动监听并回复任务状态
+
+### 安装方式
+
+```bash
+# 1. 解压 Skill
+cd /home/zealot/.openclaw/workspace
+mkdir -p skills/task-commander
+tar -xzvf /path/to/memory-console/task-commander.tar.gz -C skills/
+
+# 2. 使用命令行工具
+python3 skills/task-commander/task_stats.py stats
+
+# 3. 启动自动监听服务
+python3 skills/task-commander/agent-listener.py &
+```
+
+### Skill 文件
+
+| 文件 | 说明 |
+|------|------|
+| `task_stats.py` | 命令行工具 |
+| `agent-listener.py` | 自动监听服务 |
+| `SKILL.md` | Skill 文档 |
+
+### 使用示例
+
+```bash
+# 获取任务统计
+python3 skills/task-commander/task_stats.py stats
+
+# 创建任务
+python3 skills/task-commander/task_stats.py create auditer "审计代码"
+
+# 发送消息
+python3 skills/task-commander/task_stats.py message main auditer "任务完成"
+```
+
+### 相关文件
+
+- `task-commander.tar.gz` - Skill 打包文件
+- `skills/task-commander/` - Skill 目录
+
 ## 📦 技术栈
 
 - Next.js 16
