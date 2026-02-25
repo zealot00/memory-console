@@ -57,6 +57,7 @@ npm run dev
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
+| `/api/tasks` | GET/POST/PATCH | 任务管理 |
 | `/api/audit` | GET | 审计日志 |
 | `/api/tokens` | GET/POST | Token 管理 |
 
@@ -109,6 +110,35 @@ curl -N -H "Authorization: Bearer dev-token-1234567890abcdef" \
 | `notification` | 通知 |
 | `task` | 任务 |
 | `event` | 事件 |
+
+## 📋 任务统计
+
+### 任务管理 API
+
+```bash
+# 获取任务统计
+curl -H "Authorization: Bearer dev-token-1234567890abcdef" \
+  "http://localhost:3000/api/tasks?stats=true"
+
+# 创建任务
+curl -X POST -H "Authorization: Bearer dev-token-1234567890abcdef" \
+  -H "Content-Type: application/json" \
+  -d '{"agent": "auditer", "title": "审计代码"}' \
+  "http://localhost:3000/api/tasks"
+
+# 更新任务状态
+curl -X PATCH -H "Authorization: Bearer dev-token-1234567890abcdef" \
+  -H "Content-Type: application/json" \
+  -d '{"taskId": "xxx", "status": "completed", "result": "完成"}' \
+  "http://localhost:3000/api/tasks"
+```
+
+### 任务状态
+
+- `pending` - 待处理
+- `in_progress` - 进行中
+- `completed` - 已完成
+- `failed` - 失败
 
 ## 📦 技术栈
 
