@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Memory Console 🧠
 
-## Getting Started
+记忆控制台是一个基于 Next.js 和 PostgreSQL (pgvector) 的 AI 记忆管理系统，支持本地存储和云端同步。
 
-First, run the development server:
+- 📝## 功能特性
+
+ **创建记忆** - 支持 AI 记忆和人类记忆两种类型
+- 🔍 **搜索记忆** - 按标题、内容或标签搜索
+- 🏷️ **标签管理** - 为记忆添加和编辑标签
+- 📁 **Namespace 支持** - 按命名空间分类管理记忆
+- ☁️ **云端同步** - 支持同步到阿里云
+- 🎨 **现代化 UI** - 精美的响应式界面
+
+## 快速开始
+
+### 安装依赖
+
+```bash
+npm install
+```
+
+### 启动开发服务器
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+打开 [http://localhost:3000](http://localhost:3000) 查看应用。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 使用说明
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 创建记忆
 
-## Learn More
+1. 点击右上角的 **"添加记忆"** 按钮
+2. 在弹出的菜单中选择 **AI 记忆** 或 **人类记忆**
+3. 填写记忆标题和内容
+4. 可以添加标签（用逗号分隔）
+5. 点击 **"保存更改"** 按钮
 
-To learn more about Next.js, take a look at the following resources:
+### 使用 Namespace
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+应用支持多个命名空间来分类管理记忆：
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- 🏠 **默认** - 默认命名空间
+- 🌐 **全局** - 全局共享记忆
+- 🔍 **审计模块** - 审计相关记忆
+- 🧠 **记忆中枢** - 核心记忆存储
 
-## Deploy on Vercel
+切换 Namespace：
+1. 在左侧边栏找到 **"命名空间"** 部分
+2. 点击当前命名空间
+3. 选择目标命名空间即可切换
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### 删除记忆
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. 点击需要删除的记忆卡片
+2. 在编辑弹窗中点击左下角的 **"删除"** 按钮
+3. 确认删除操作
+
+### 搜索记忆
+
+在页面顶部的搜索框中输入关键词，可以搜索：
+- 记忆标题
+- 记忆内容
+- 标签
+
+### 云端同步
+
+- **上传到云端** - 点击上传图标将本地记忆同步到阿里云
+- **从云端下载** - 点击下载图标从阿里云拉取记忆到本地
+
+## 技术栈
+
+- **前端**: Next.js 14, React, TypeScript, Tailwind CSS
+- **后端**: Next.js API Routes
+- **数据库**: PostgreSQL + pgvector
+- **部署**: Docker
+
+## 环境变量
+
+在 `.env.local` 中配置以下环境变量：
+
+```env
+NEXT_PUBLIC_API_TOKEN=your_api_token
+DATABASE_URL=postgresql://user:password@localhost:5432/memory_console
+```
+
+## 许可证
+
+MIT
