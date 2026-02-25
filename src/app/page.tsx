@@ -174,7 +174,7 @@ export default function MemoryConsole() {
     }
   };
 
-  const formatDate = (timestamp: number) => {
+  const formatDate = (timestamp: string | number | Date) => {
     return new Date(timestamp).toLocaleDateString("zh-CN", {
       year: "numeric",
       month: "short",
@@ -182,7 +182,7 @@ export default function MemoryConsole() {
     });
   };
 
-  const formatTime = (timestamp: number) => {
+  const formatTime = (timestamp: string | number | Date) => {
     return new Date(timestamp).toLocaleTimeString("zh-CN", {
       hour: "2-digit",
       minute: "2-digit",
