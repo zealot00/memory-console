@@ -98,3 +98,6 @@ export async function GET(request: NextRequest) {
     total: messages.length,
   });
 }
+
+// 导出广播函数供其他模块使用
+export { broadcastToAgent };
