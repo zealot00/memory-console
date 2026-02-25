@@ -9,6 +9,7 @@
 - **审计日志** - 所有操作可追溯
 - **技能大厅** - 技能创建、审批、发布
 - **Docker 部署** - 支持 Docker Compose 一键部署
+- **跨 Agent 通信** - 实时消息传递与事件流
 
 ## 🚀 快速开始
 
@@ -29,26 +30,94 @@ npm run dev
 
 ## 📡 API
 
+### 记忆管理
+
 | 端点 | 方法 | 说明 |
 |------|------|------|
 | `/api/memories` | GET/POST | 记忆 CRUD |
-| `/api/skills` | GET/POST | 技能管理 |
+| `/api/memories/search` | POST | 向量搜索 |
+
+### 技能管理
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/api/skills` | GET/POST | 技能 CRUD |
 | `/api/skills/sync` | GET/POST | 技能同步 |
+| `/api/skills/approve` | POST | 技能审批 |
+
+### 跨 Agent 通信
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/api/messages` | POST | 发送消息 |
+| `/api/messages?agent=xxx` | GET | 获取消息 |
+| `/api/messages/stream` | GET | SSE 事件流 |
+
+### 其他
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
 | `/api/audit` | GET | 审计日志 |
+| `/api/tokens` | GET/POST | Token 管理 |
 
 ### 认证
+
+所有 API 需要 Bearer Token：
 
 ```bash
 curl -H "Authorization: Bearer <TOKEN>" http://localhost:3000/api/...
 ```
 
+默认 Token：`dev-token-1234567890abcdef`
+
+## 🔄 跨 Agent 通信使用
+
+### 发送消息
+
+```bash
+curl -X POST -H "Authorization: Bearer dev-token-1234567890abcdef" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "fromAgent": "main",
+    "toAgent": "auditer",
+    "content": "任务完成，请检查",
+    "type": "notification"
+  }' \
+  "http://localhost:3000/api/messages"
+```
+
+### 获取消息
+
+```bash
+# 获取发送给指定 Agent 的消息
+curl -H "Authorization: Bearer dev-token-1234567890abcdef" \
+  "http://localhost:3000/api/messages?agent=memory-console"
+```
+
+### 实时事件流 (SSE)
+
+```bash
+# 订阅实时消息
+curl -N -H "Authorization: Bearer dev-token-1234567890abcdef" \
+  "http://localhost:3000/api/messages/stream?agent=main"
+```
+
+### 消息类型
+
+| 类型 | 说明 |
+|------|------|
+| `notification` | 通知 |
+| `task` | 任务 |
+| `event` | 事件 |
+
 ## 📦 技术栈
 
-- Next.js 14
+- Next.js 16
 - React 19
 - Prisma ORM
 - PostgreSQL + pgvector
 - Tailwind CSS 4
+- Server-Sent Events (SSE)
 
 ## 🤖 开发维护
 
