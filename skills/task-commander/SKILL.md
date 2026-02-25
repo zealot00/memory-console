@@ -89,7 +89,12 @@ MEMORY_CONSOLE_TOKEN=dev-token-1234567890abcdef
 ### 启动监听
 
 ```bash
-python3 /home/zealot/.openclaw/workspace/agent-listener.py &
+# 使用环境变量（可选）
+export WORKSPACE_DIR="$HOME/.openclaw/workspace"
+python3 "$WORKSPACE_DIR/agent-listener.py &
+
+# 或直接运行
+python3 skills/task-commander/agent-listener.py &
 ```
 
 ### 关键词触发

@@ -152,7 +152,10 @@ curl -X PATCH -H "Authorization: Bearer dev-token-1234567890abcdef" \
 
 ```bash
 # 1. 解压 Skill
-cd /home/zealot/.openclaw/workspace
+# 设置环境变量（可选，默认 ~/.openclaw/workspace）
+export WORKSPACE_DIR="$HOME/.openclaw/workspace"
+
+cd "$WORKSPACE_DIR"
 mkdir -p skills/task-commander
 tar -xzvf /path/to/memory-console/task-commander.tar.gz -C skills/
 
