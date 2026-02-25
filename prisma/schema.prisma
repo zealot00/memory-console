@@ -80,3 +80,17 @@ model ApiToken {
   @@index([token])
   @@index([namespace])
 }
+
+model Message {
+  id        String   @id @default(cuid())
+  fromAgent String
+  toAgent   String
+  content   String   @db.Text
+  type      String   @default("notification") // task|notification|event
+  status    String   @default("unread") // unread|read
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([toAgent])
+  @@index([createdAt])
+}
