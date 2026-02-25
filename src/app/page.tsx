@@ -1,20 +1,34 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Plus, User, Bot, Clock, Upload, Download, Trash2, X, Calendar, RefreshCw, ChevronRight, Sparkles, Brain, Sparkle, Menu } from "lucide-react";
+import { Search, Plus, User, Bot, Clock, Upload, Download, Trash2, X, Calendar, RefreshCw, ChevronRight, Sparkles, Brain, Sparkle, Menu, Layers } from "lucide-react";
 
 interface Memory {
-  _id: string;
+  id: string;
   title: string;
   content: string;
   source: string;
   owner: "ai" | "human";
+  status: string;
+  namespace: string;
   tags: string[];
-  createdAt: number;
-  updatedAt: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 const API_BASE = "/api/memories";
+
+const getAuthHeaders = () => ({
+  "Content-Type": "application/json",
+  "Authorization": `Bearer ${process.env.NEXT_PUBLIC_API_TOKEN || ''}`,
+});
+
+const NAMESPACES = [
+  { id: "default", name: "默认", icon: "🏠" },
+  { id: "global", name: "全局", icon: "🌐" },
+  { id: "auditer", name: "审计模块", icon: "🔍" },
+  { id: "memory-console", name: "记忆中枢", icon: "🧠" },
+];
 
 export default function MemoryConsole() {
   const [memories, setMemories] = useState<Memory[]>([]);
@@ -29,16 +43,20 @@ export default function MemoryConsole() {
   const [syncing, setSyncing] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [currentNamespace, setCurrentNamespace] = useState("default");
+  const [namespaceMenuOpen, setNamespaceMenuOpen] = useState(false);
 
   useEffect(() => {
     loadMemories();
-  }, []);
+  }, [currentNamespace]);
 
   const loadMemories = async () => {
+    setLoading(true);
     try {
-      const res = await fetch(API_BASE);
+      const url = `${API_BASE}?namespace=${currentNamespace}`;
+      const res = await fetch(url, { headers: getAuthHeaders() });
       const data = await res.json();
-      setMemories(data);
+      setMemories(data.items || []);
     } catch (e) {
       console.error("Failed to load memories:", e);
     } finally {
@@ -73,9 +91,9 @@ export default function MemoryConsole() {
     
     await fetch(API_BASE, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
-        id: selectedMemory._id,
+        id: selectedMemory.id,
         title: editTitle,
         content: editContent,
         tags: editTags.split(",").map((t) => t.trim()).filter(Boolean),
@@ -93,12 +111,13 @@ export default function MemoryConsole() {
       content: "在此输入记忆内容...",
       source: "memory-console",
       owner: owner,
+      namespace: currentNamespace,  // 使用当前选择的 namespace
       tags: [owner === "ai" ? "AI" : "人类"],
     };
     
     await fetch(API_BASE, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: getAuthHeaders(),
       body: JSON.stringify(newMemory),
     });
     
@@ -107,7 +126,10 @@ export default function MemoryConsole() {
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`${API_BASE}?id=${id}`, { method: "DELETE" });
+    await fetch(`${API_BASE}?id=${id}`, { 
+      method: "DELETE",
+      headers: getAuthHeaders(),
+    });
     setSelectedMemory(null);
     setIsEditing(false);
     loadMemories();
@@ -266,6 +288,56 @@ export default function MemoryConsole() {
           </button>
         </nav>
 
+        {/* Namespace Switcher */}
+        <div className="px-3 py-2 border-t border-slate-100">
+          <p className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">命名空间</p>
+          <div className="relative">
+            <button
+              onClick={() => setNamespaceMenuOpen(!namespaceMenuOpen)}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium bg-slate-50 hover:bg-slate-100 transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <Layers className="w-4 h-4 text-violet-500" />
+                <span>{NAMESPACES.find(n => n.id === currentNamespace)?.name || currentNamespace}</span>
+              </div>
+              <ChevronRight className={`w-4 h-4 text-slate-400 transition-transform ${namespaceMenuOpen ? 'rotate-90' : ''}`} />
+            </button>
+            
+            {namespaceMenuOpen && (
+              <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-xl border border-slate-200 py-1 z-50">
+                {NAMESPACES.map((ns) => (
+                  <button
+                    key={ns.id}
+                    onClick={() => {
+                      setCurrentNamespace(ns.id);
+                      setNamespaceMenuOpen(false);
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
+                      currentNamespace === ns.id 
+                        ? "bg-violet-50 text-violet-700" 
+                        : "text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span>{ns.icon}</span>
+                    <span>{ns.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Skill Forge Link */}
+        <div className="px-3 py-2 border-t border-slate-100">
+          <a
+            href="/skills"
+            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-600 hover:bg-amber-50 transition-colors"
+          >
+            <Sparkles className="w-4 h-4 text-amber-500" />
+            技能大厅
+          </a>
+        </div>
+
         {/* Sync */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-100 bg-white">
           <p className="px-3 py-2 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">同步</p>
@@ -407,7 +479,7 @@ export default function MemoryConsole() {
             <div className="grid gap-3">
               {filteredMemories.map((memory) => (
                 <div 
-                  key={memory._id} 
+                  key={memory.id} 
                   onClick={(e) => handleEdit(memory, e)}
                   className="group bg-white rounded-2xl border border-slate-200 p-5 hover:border-violet-300 hover:shadow-lg hover:shadow-violet-500/10 transition-all duration-200 cursor-pointer"
                 >
@@ -526,7 +598,7 @@ export default function MemoryConsole() {
             
             <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50">
               <button
-                onClick={() => handleDelete(selectedMemory._id)}
+                onClick={() => handleDelete(selectedMemory.id)}
                 className="px-4 py-2.5 text-red-500 hover:bg-red-50 hover:text-red-600 rounded-xl transition-colors text-sm font-medium flex items-center gap-2"
               >
                 <Trash2 className="w-4 h-4" />
