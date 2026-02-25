@@ -106,6 +106,21 @@ python3 skills/task-commander/agent-listener.py &
 - 统计
 - report
 
+### 环境变量配置
+
+```bash
+# 必需配置
+export MEMORY_CONSOLE_TOKEN="dev-token-1234567890abcdef"
+export MEMORY_CONSOLE_URL="http://localhost:3000"
+
+# 可选配置
+export AGENTS="main,auditer,memory-console,dev-manager,system-events"
+export PROCESSED_FILE="/tmp/agent_listener_processed.txt"
+```
+- status
+- 统计
+- report
+
 ## 示例工作流
 
 ### 1. 派发任务给 Agent

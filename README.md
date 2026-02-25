@@ -174,6 +174,24 @@ python3 skills/task-commander/agent-listener.py &
 | `agent-listener.py` | 自动监听服务 |
 | `SKILL.md` | Skill 文档 |
 
+### 环境变量配置
+
+```bash
+# 必需配置
+export MEMORY_CONSOLE_TOKEN="dev-token-1234567890abcdef"
+export MEMORY_CONSOLE_URL="http://localhost:3000"
+
+# 可选配置
+export AGENTS="main,auditer,memory-console,dev-manager,system-events"  # 监听 Agents 列表
+export WORKSPACE_DIR="$HOME/.openclaw/workspace"
+export PROCESSED_FILE="/tmp/agent_listener_processed.txt"
+```
+
+**说明：**
+- `MEMORY_CONSOLE_TOKEN` - API 认证 Token
+- `MEMORY_CONSOLE_URL` - memory-console 服务地址
+- `AGENTS` - 逗号分隔的 Agents 列表（可选，默认会自动获取）
+
 ### 使用示例
 
 ```bash

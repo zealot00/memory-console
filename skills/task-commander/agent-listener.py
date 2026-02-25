@@ -5,10 +5,31 @@ import json
 import subprocess
 import requests
 
-TOKEN = "dev-token-1234567890abcdef"
-URL = "http://localhost:3000"
-AGENTS = ["main", "auditer", "memory-console", "dev-manager", "system-events"]
-PROCESSED_FILE = "/tmp/agent_listener_processed.txt"
+TOKEN = os.environ.get("MEMORY_CONSOLE_TOKEN", "dev-token-1234567890abcdef")
+URL = os.environ.get("MEMORY_CONSOLE_URL", "http://localhost:3000")
+
+# 从环境变量读取 Agents 列表，逗号分隔
+# 或从 memory-console API 自动获取
+def get_agents():
+    agents_env = os.environ.get("AGENTS", "")
+    if agents_env:
+        return [a.strip() for a in agents_env.split(",") if a.strip()]
+    
+    # 尝试从 memory-console API 获取 Agents 配置
+    try:
+        resp = requests.get(f"{URL}/api/agents", 
+                          headers={"Authorization": f"Bearer {TOKEN}"}, timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            return [a.get("name") for a in data.get("items", [])]
+    except:
+        pass
+    
+    # 默认值
+    return ["main", "auditer", "memory-console", "dev-manager", "system-events"]
+
+AGENTS = get_agents()
+PROCESSED_FILE = os.environ.get("PROCESSED_FILE", "/tmp/agent_listener_processed.txt")
 
 def log(msg):
     print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] {msg}")
