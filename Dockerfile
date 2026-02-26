@@ -27,9 +27,18 @@ WORKDIR /app
 ENV NODE_ENV=production
 
 # Install openssl for Prisma (Debian 11 has OpenSSL 1.1.x)
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Try multiple sources for libssl1.1
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
     openssl \
     libssl1.1 \
+    || (echo 'Trying alternative source' && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+    openssl \
+    libssl1.1 \
+    || (wget -q https://deb.debian.org/debian/pool/main/o/openssl/libssl1.1_1.1.1w-0+deb11u1_amd64.deb -O /tmp/libssl1.1.deb && \
+    dpkg -i /tmp/libssl1.1.deb || apt-get install -f -y)) \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
