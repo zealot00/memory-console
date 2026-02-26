@@ -34,9 +34,8 @@ export async function POST(request: NextRequest) {
   await prisma.auditLog.create({
     data: {
       action: 'task_create',
-      resource: 'task',
-      resourceId: task.id,
       entityType: 'Task',
+      entityId: task.id,
       details: { agent, title },
       tokenId: apiToken.id,
     },
@@ -119,9 +118,8 @@ export async function PATCH(request: NextRequest) {
   await prisma.auditLog.create({
     data: {
       action: 'task_update',
-      resource: 'task',
-      resourceId: task.id,
       entityType: 'Task',
+      entityId: task.id,
       details: { status, result: result?.substring(0, 100) },
       tokenId: apiToken.id,
     },

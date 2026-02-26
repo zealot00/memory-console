@@ -8,7 +8,7 @@ services:
     container_name: memory-console
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3001:3000"
     environment:
       - NODE_ENV=production
       - NEXT_PUBLIC_API_TOKEN=${NEXT_PUBLIC_API_TOKEN:-dev-token-1234567890abcdef}

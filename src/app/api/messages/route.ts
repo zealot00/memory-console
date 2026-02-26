@@ -49,9 +49,8 @@ export async function POST(request: NextRequest) {
   await prisma.auditLog.create({
     data: {
       action: 'message_send',
-      resource: 'message',
-      resourceId: message.id,
       entityType: 'Message',
+      entityId: message.id,
       details: { fromAgent, toAgent, type },
       tokenId: apiToken.id,
     },
@@ -100,4 +99,4 @@ export async function GET(request: NextRequest) {
 }
 
 // 导出广播函数供其他模块使用
-export { broadcastToAgent };
+// export { broadcastToAgent };

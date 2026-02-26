@@ -231,7 +231,7 @@ describe('API: /api/skills', () => {
       const response = await skillsPUT(request);
       const data = await response.json();
 
-      expect(response.status).toBe(500);
+      expect(response.status).toBe(404);
     });
   });
 

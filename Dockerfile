@@ -1,5 +1,5 @@
 # Build stage
-FROM node:20-slim AS builder
+FROM node:20-bullseye AS builder
 
 WORKDIR /app
 
@@ -19,14 +19,14 @@ RUN npx prisma generate
 RUN npm run build
 
 # Production stage
-FROM node:20-slim AS runner
+FROM node:20-bullseye AS runner
 
 WORKDIR /app
 
 # Set production environment
 ENV NODE_ENV=production
 
-# Install openssl for Prisma
+# Install openssl for Prisma (Debian 11 has OpenSSL 1.1.x)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     openssl \
     libssl1.1 \

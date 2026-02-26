@@ -109,3 +109,21 @@ model Task {
   @@index([agent])
   @@index([status])
 }
+
+// Agent 注册表模型
+model Agent {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  displayName  String?
+  status       String   @default("offline") // online|offline|busy
+  capabilities Json?    // Agent 能力列表
+  metadata     Json?    @default("{}") // 额外元数据
+  namespace    String   @default("default")
+  lastSeen     DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status])
+  @@index([namespace])
+  @@index([lastSeen])
+}

@@ -126,13 +126,27 @@ export default function MemoryConsole() {
   };
 
   const handleDelete = async (id: string) => {
-    await fetch(`${API_BASE}?id=${id}`, { 
-      method: "DELETE",
-      headers: getAuthHeaders(),
-    });
-    setSelectedMemory(null);
-    setIsEditing(false);
-    loadMemories();
+    if (!confirm("确定要删除这条记忆吗？此操作不可恢复。")) return;
+    
+    try {
+      const res = await fetch(`${API_BASE}?id=${id}`, { 
+        method: "DELETE",
+        headers: getAuthHeaders(),
+      });
+      
+      if (!res.ok) {
+        const error = await res.json();
+        alert("删除失败: " + (error.error || "未知错误"));
+        return;
+      }
+      
+      setSelectedMemory(null);
+      setIsEditing(false);
+      loadMemories();
+    } catch (e) {
+      console.error("Delete error:", e);
+      alert("删除失败，请检查网络连接");
+    }
   };
 
   const syncToRemote = async () => {
