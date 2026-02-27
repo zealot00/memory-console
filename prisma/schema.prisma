@@ -87,12 +87,14 @@ model Message {
   fromAgent String
   toAgent   String
   content   String   @db.Text
-  type      String   @default("notification") // task|notification|event
+  type      String   @default("notification") // task|notification|event|discussion|proposal|vote|integration
   status    String   @default("unread") // unread|read
+  metadata  Json?    @default("{}") // 扩展字段：proposal, vote, evidence等
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([toAgent])
+  @@index([type])
   @@index([createdAt])
 }
 
