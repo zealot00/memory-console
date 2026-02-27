@@ -147,6 +147,7 @@ curl -X PATCH -H "Authorization: Bearer dev-token-1234567890abcdef" \
 - 统计各 Agent 的任务数量
 - 跨 Agent 发送消息
 - 自动监听并回复任务状态
+- 并行任务执行
 
 ### 安装方式
 
