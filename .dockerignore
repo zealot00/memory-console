@@ -1,3 +1,11 @@
 node_modules
 .next
-.prisma
+.git
+*.md
+docs/
+__tests__/
+.dockerignore
+Dockerfile*
+docker-compose*
+*.collab*
+PLAN-*
