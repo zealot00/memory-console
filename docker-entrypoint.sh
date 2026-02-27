@@ -1,5 +1,5 @@
 #!/bin/sh
 set -e
 
-echo "Starting the application..."
+echo "Starting application..."
 exec node server.js
