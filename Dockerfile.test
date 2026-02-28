@@ -1,0 +1,27 @@
+FROM node:20-bookworm
+
+WORKDIR /app
+
+# 安装 sqlite3
+RUN apt-get update && apt-get install -y sqlite3 && rm -rf /var/lib/apt/lists/*
+
+COPY package*.json ./
+RUN npm ci
+
+COPY prisma ./prisma/
+COPY . .
+
+# 生成Prisma Client
+RUN npx prisma generate
+
+# 使用SQLite内存模式
+RUN echo ' datasource db {
+  provider = "sqlite"
+  url      = "file::memory:"
+}' > prisma/schema.sqlite.prisma && mv prisma/schema.prisma prisma/schema.backup && mv prisma/schema.sqlite.prisma prisma/schema.prisma
+
+RUN npm run build
+
+EXPOSE 3000
+
+CMD ["npm", "start"]
