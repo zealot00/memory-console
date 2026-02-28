@@ -8,7 +8,7 @@ on:
 
 jobs:
   test:
-    runs-on: openclaw-memory-runner
+    runs-on: self-hosted
     
     steps:
       - uses: actions/checkout@v4
