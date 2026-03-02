@@ -211,6 +211,29 @@ python3 skills/task-commander/task_stats.py message main auditer "任务完成"
 - `task-commander.tar.gz` - Skill 打包文件
 - `skills/task-commander/` - Skill 目录
 
+## 🛠️ 配套工具
+
+### Memory Query Skill
+
+查询 memory-console 记忆的命令行工具。
+
+```bash
+# 安装
+cp -r skills/memory-query ~/tools/
+
+# 使用
+python3 ~/tools/memory-query/query.py "搜索关键词"
+
+# 或设置环境变量
+export MEMORY_CONSOLE_URL=http://localhost:3000
+export MEMORY_CONSOLE_TOKEN=your-token-here
+python3 ~/tools/memory-query/query.py "关键词"
+```
+
+**环境变量：**
+- `MEMORY_CONSOLE_URL`: API 地址 (默认: http://localhost:3000)
+- `MEMORY_CONSOLE_TOKEN`: API Token (默认: dev-token-1234567890abcdef)
+
 ## 📦 技术栈
 
 - Next.js 16
