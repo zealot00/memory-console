@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withReadAuth, withWriteAuth, withAdminAuth, logAudit } from "@/lib/auth";
+import { getClientIP, errorResponse } from "@/lib/utils";
+import { CreateSkillSchema, UpdateSkillSchema } from "@/lib/schemas";
 
 // GET /api/skills - 获取技能列表
 export async function GET(request: NextRequest) {
@@ -63,6 +65,11 @@ export async function POST(request: NextRequest) {
   return withWriteAuth(async (req, auth) => {
     try {
       const body = await request.json();
+      const validated = CreateSkillSchema.safeParse(body);
+
+      if (!validated.success) {
+        return errorResponse(validated.error.errors[0].message, 400);
+      }
 
       const skill = await prisma.skill.create({
         data: {
@@ -77,9 +84,6 @@ export async function POST(request: NextRequest) {
       });
 
       // 记录审计日志
-      const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() 
-        || request.headers.get("x-real-ip") 
-        || "unknown";
       await logAudit(
         "create",
         "skill",
@@ -87,7 +91,7 @@ export async function POST(request: NextRequest) {
         auth.namespace,
         undefined,
         auth.tokenId,
-        ipAddress,
+        getClientIP(request),
         { name: skill.name, status: skill.status }
       );
 
@@ -107,9 +111,10 @@ export async function PUT(request: NextRequest) {
   return withWriteAuth(async (req, auth) => {
     try {
       const body = await request.json();
+      const validated = UpdateSkillSchema.safeParse(body);
 
-      if (!body.id) {
-        return NextResponse.json({ error: "ID required" }, { status: 400 });
+      if (!validated.success) {
+        return errorResponse(validated.error.errors[0].message, 400);
       }
 
       // 获取原技能状态
@@ -130,9 +135,6 @@ export async function PUT(request: NextRequest) {
       });
 
       // 记录审计日志
-      const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() 
-        || request.headers.get("x-real-ip") 
-        || "unknown";
       await logAudit(
         "update",
         "skill",
@@ -140,7 +142,7 @@ export async function PUT(request: NextRequest) {
         auth.namespace,
         undefined,
         auth.tokenId,
-        ipAddress,
+        getClientIP(request),
         { 
           name: skill.name,
           oldStatus: oldSkill?.status,

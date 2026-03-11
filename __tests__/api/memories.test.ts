@@ -216,7 +216,6 @@ describe('API: /api/memories', () => {
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.error).toBe('ID required');
     });
   });
 

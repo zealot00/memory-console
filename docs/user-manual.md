@@ -289,6 +289,125 @@ PUT /api/memories
 DELETE /api/memories?id=MEMORY_ID
 ```
 
+#### 语义搜索
+
+```http
+POST /api/memories/search
+```
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| query | string | 是 | 搜索关键词 |
+| namespace | string | 否 | 命名空间 |
+| limit | number | 否 | 返回数量限制 (默认: 20) |
+| minScore | number | 否 | 最小相似度分数 (默认: 0.1) |
+
+**示例：**
+
+```bash
+curl -X POST http://localhost:3000/api/memories/search \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "项目架构设计",
+    "namespace": "default",
+    "limit": 10
+  }'
+```
+
+#### 批量操作
+
+```http
+POST /api/memories/batch
+```
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| operation | string | 是 | 操作类型: delete, archive, update, addTags |
+| ids | string[] | 是 | 记忆 ID 数组 |
+| data | object | 否 | 操作数据 |
+
+**示例：**
+
+```bash
+# 批量删除
+curl -X POST http://localhost:3000/api/memories/batch \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "delete",
+    "ids": ["id1", "id2", "id3"]
+  }'
+
+# 批量归档
+curl -X POST http://localhost:3000/api/memories/batch \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "archive",
+    "ids": ["id1", "id2"]
+  }'
+
+# 批量添加标签
+curl -X POST http://localhost:3000/api/memories/batch \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "addTags",
+    "ids": ["id1"],
+    "data": {"tags": ["重要", "待处理"]}
+  }'
+```
+
+---
+
+### 消息 API
+
+#### 发送消息
+
+```http
+POST /api/messages
+```
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| fromAgent | string | 是 | 发送者 |
+| toAgent | string | 是 | 接收者 |
+| content | string | 是 | 消息内容 |
+| type | string | 否 | 消息类型: notification/task/event |
+
+#### 获取消息
+
+```http
+GET /api/messages?agent=xxx
+```
+
+#### 更新已读状态
+
+```http
+PATCH /api/messages
+```
+
+**请求体：**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| agent | string | 否* | Agent 名称 |
+| messageIds | string[] | 否* | 消息 ID 数组 |
+| markAs | string | 否 | 状态: read/unread |
+
+#### SSE 实时事件流
+
+```http
+GET /api/messages/stream?agent=xxx
+```
+
 ---
 
 ### 技能 API
@@ -563,6 +682,7 @@ const memories = await client.getMemories({ namespace: 'default', page: '1' });
 | 变量 | 必填 | 说明 | 默认值 |
 |------|------|------|--------|
 | DATABASE_URL | 是 | PostgreSQL 连接字符串 | - |
+| API_TOKEN | 否 | API 认证 Token | dev-token-1234567890abcdef |
 | NODE_ENV | 否 | 运行环境 | development |
 
 ### 数据库 Schema

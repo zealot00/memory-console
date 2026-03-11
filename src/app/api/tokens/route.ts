@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAdminAuth, logAudit } from "@/lib/auth";
+import { getClientIP, errorResponse } from "@/lib/utils";
+import { CreateTokenSchema, UpdateTokenSchema } from "@/lib/schemas";
 import { randomBytes } from "crypto";
 
-// 生成 token
 function generateToken(): string {
   return randomBytes(32).toString("hex");
 }
 
-// GET /api/tokens - 获取 Token 列表
 export async function GET(request: NextRequest) {
   return withAdminAuth(async (req, auth) => {
     try {
@@ -27,7 +27,6 @@ export async function GET(request: NextRequest) {
           lastUsedAt: true,
           createdAt: true,
           updatedAt: true,
-          // 不返回 token 本身
         },
       });
 
@@ -39,13 +38,17 @@ export async function GET(request: NextRequest) {
   })(request);
 }
 
-// POST /api/tokens - 创建 Token
 export async function POST(request: NextRequest) {
   return withAdminAuth(async (req, auth) => {
     try {
       const body = await request.json();
+      const validated = CreateTokenSchema.safeParse(body);
+
+      if (!validated.success) {
+        return errorResponse(validated.error.errors[0].message, 400);
+      }
+
       const namespace = body.namespace || auth.namespace;
-      
       const tokenValue = generateToken();
       
       const apiToken = await prisma.apiToken.create({
@@ -58,10 +61,6 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // 记录审计日志
-      const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() 
-        || request.headers.get("x-real-ip") 
-        || "unknown";
       await logAudit(
         "create",
         "token",
@@ -69,15 +68,14 @@ export async function POST(request: NextRequest) {
         namespace,
         undefined,
         auth.tokenId,
-        ipAddress,
+        getClientIP(request),
         { name: apiToken.name, permissions: apiToken.permissions }
       );
 
-      // 返回创建的 token（只返回一次）
       return NextResponse.json({
         id: apiToken.id,
         name: apiToken.name,
-        token: tokenValue, // 只在这里返回一次
+        token: tokenValue,
         namespace: apiToken.namespace,
         permissions: apiToken.permissions,
         expiresAt: apiToken.expiresAt,
@@ -90,14 +88,14 @@ export async function POST(request: NextRequest) {
   })(request);
 }
 
-// PUT /api/tokens - 更新 Token
 export async function PUT(request: NextRequest) {
   return withAdminAuth(async (req, auth) => {
     try {
       const body = await request.json();
+      const validated = UpdateTokenSchema.safeParse(body);
 
-      if (!body.id) {
-        return NextResponse.json({ error: "ID required" }, { status: 400 });
+      if (!validated.success) {
+        return errorResponse(validated.error.errors[0].message, 400);
       }
 
       const apiToken = await prisma.apiToken.update({
@@ -111,10 +109,6 @@ export async function PUT(request: NextRequest) {
         },
       });
 
-      // 记录审计日志
-      const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() 
-        || request.headers.get("x-real-ip") 
-        || "unknown";
       await logAudit(
         "update",
         "token",
@@ -122,7 +116,7 @@ export async function PUT(request: NextRequest) {
         auth.namespace,
         undefined,
         auth.tokenId,
-        ipAddress,
+        getClientIP(request),
         { name: apiToken.name }
       );
 
@@ -133,9 +127,9 @@ export async function PUT(request: NextRequest) {
         permissions: apiToken.permissions,
         expiresAt: apiToken.expiresAt,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error updating token:", error);
-      if (error.code === "P2025") {
+      if (error && typeof error === 'object' && 'code' in error && error.code === "P2025") {
         return NextResponse.json({ error: "Token not found" }, { status: 404 });
       }
       return NextResponse.json({ error: "Failed to update token" }, { status: 500 });
@@ -143,7 +137,6 @@ export async function PUT(request: NextRequest) {
   })(request);
 }
 
-// DELETE /api/tokens - 删除 Token
 export async function DELETE(request: NextRequest) {
   return withAdminAuth(async (req, auth) => {
     try {
@@ -154,7 +147,6 @@ export async function DELETE(request: NextRequest) {
         return NextResponse.json({ error: "ID required" }, { status: 400 });
       }
 
-      // 获取要删除的 token
       const token = await prisma.apiToken.findUnique({
         where: { id },
       });
@@ -163,10 +155,6 @@ export async function DELETE(request: NextRequest) {
         where: { id },
       });
 
-      // 记录审计日志
-      const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() 
-        || request.headers.get("x-real-ip") 
-        || "unknown";
       await logAudit(
         "delete",
         "token",
@@ -174,7 +162,7 @@ export async function DELETE(request: NextRequest) {
         auth.namespace,
         undefined,
         auth.tokenId,
-        ipAddress,
+        getClientIP(request),
         { name: token?.name }
       );
 

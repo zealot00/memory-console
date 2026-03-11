@@ -1,5 +1,31 @@
 # Progress - 开发进度日志
 
+## 2026-03-11 - 优化升级
+
+### 已完成优化
+
+- [x] 硬编码 Token 改为环境变量
+- [x] 统一 Prisma 客户端实例
+- [x] 提取公共工具函数
+- [x] 添加输入验证 (Zod)
+- [x] SSE 消息推送实现
+- [x] 速率限制工具 (可选使用)
+
+### 新增功能
+
+- [x] 语义搜索 API (`/api/memories/search`)
+- [x] 批量操作 API (`/api/memories/batch`)
+- [x] 消息已读状态更新 (`PATCH /api/messages`)
+
+### 单元测试
+
+- [x] 78 个测试用例通过
+- [x] 新增 messages.test.ts
+- [x] 新增 tasks.test.ts
+- [x] 新增 agents.test.ts
+
+---
+
 ## 2026-02-24
 
 ### 17:30 - 项目初始化检查

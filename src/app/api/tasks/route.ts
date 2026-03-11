@@ -1,36 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/lib/prisma';
+import { getClientIP, errorResponse } from '@/lib/utils';
+import { CreateTaskSchema, UpdateTaskSchema } from '@/lib/schemas';
 
 function getAuthToken(request: NextRequest) {
   return request.headers.get('Authorization')?.replace('Bearer ', '');
 }
 
-// 创建任务
+async function validateToken(token: string) {
+  const apiToken = await prisma.apiToken.findUnique({ where: { token } });
+  if (apiToken) return apiToken;
+  
+  const devToken = process.env.API_TOKEN || process.env.NEXT_PUBLIC_API_TOKEN;
+  if (devToken && token === devToken) {
+    return { id: 'dev', name: 'dev-token' };
+  }
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   const token = getAuthToken(request);
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const apiToken = await prisma.apiToken.findUnique({ where: { token } });
+  const apiToken = await validateToken(token);
   if (!apiToken) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }
 
   const body = await request.json();
-  const { agent, title, description } = body;
+  const validated = CreateTaskSchema.safeParse(body);
 
-  if (!agent || !title) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  if (!validated.success) {
+    return errorResponse(validated.error.errors[0].message, 400);
   }
+
+  const { agent, title, description } = body;
 
   const task = await prisma.task.create({
     data: { agent, title, description, status: 'pending' },
   });
 
-  // 记录审计日志
   await prisma.auditLog.create({
     data: {
       action: 'task_create',
@@ -44,29 +55,30 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(task);
 }
 
-// 获取任务统计
 export async function GET(request: NextRequest) {
   const token = getAuthToken(request);
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const apiToken = await validateToken(token);
+  if (!apiToken) {
+    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const agent = searchParams.get('agent');
   const statsOnly = searchParams.get('stats') === 'true';
 
-  let where = {};
-  if (agent) where = { agent };
+  const where = agent ? { agent } : {};
 
   if (statsOnly) {
-    // 返回统计信息
     const total = await prisma.task.count({ where });
     const pending = await prisma.task.count({ where: { ...where, status: 'pending' } });
     const inProgress = await prisma.task.count({ where: { ...where, status: 'in_progress' } });
     const completed = await prisma.task.count({ where: { ...where, status: 'completed' } });
     const failed = await prisma.task.count({ where: { ...where, status: 'failed' } });
 
-    // 按 Agent 分组统计
     const byAgent = await prisma.task.groupBy({
       by: ['agent', 'status'],
       _count: true,
@@ -87,26 +99,27 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ tasks });
 }
 
-// 更新任务状态
 export async function PATCH(request: NextRequest) {
   const token = getAuthToken(request);
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const apiToken = await prisma.apiToken.findUnique({ where: { token } });
+  const apiToken = await validateToken(token);
   if (!apiToken) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }
 
   const body = await request.json();
-  const { taskId, status, result } = body;
+  const validated = UpdateTaskSchema.safeParse(body);
 
-  if (!taskId || !status) {
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+  if (!validated.success) {
+    return errorResponse(validated.error.errors[0].message, 400);
   }
 
-  const updateData: any = { status };
+  const { taskId, status, result } = body;
+
+  const updateData: Record<string, unknown> = { status };
   if (result) updateData.result = result;
   if (status === 'completed') updateData.completedAt = new Date();
 

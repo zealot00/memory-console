@@ -11,7 +11,8 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - NEXT_PUBLIC_API_TOKEN=${NEXT_PUBLIC_API_TOKEN:-dev-token-1234567890abcdef}
+      - API_TOKEN=${API_TOKEN:-dev-token-1234567890abcdef}
+      - NEXT_PUBLIC_API_TOKEN=${API_TOKEN:-dev-token-1234567890abcdef}
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/memory_console
     depends_on:
       db:

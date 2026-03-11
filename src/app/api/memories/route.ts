@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withReadAuth, withWriteAuth, logAudit } from "@/lib/auth";
+import { getClientIP, errorResponse } from "@/lib/utils";
+import { CreateMemorySchema, UpdateMemorySchema } from "@/lib/schemas";
 
 // GET /api/memories - 获取所有记忆（支持分页和过滤）
 export async function GET(request: NextRequest) {
@@ -42,9 +44,6 @@ export async function GET(request: NextRequest) {
       ]);
 
       // 记录审计日志
-      const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() 
-        || request.headers.get("x-real-ip") 
-        || "unknown";
       await logAudit(
         "read",
         "memory",
@@ -52,7 +51,7 @@ export async function GET(request: NextRequest) {
         namespace,
         undefined,
         auth.tokenId,
-        ipAddress,
+        getClientIP(request),
         { count: total, filters: { owner, status, search } }
       );
 
@@ -75,6 +74,12 @@ export async function POST(request: NextRequest) {
   return withWriteAuth(async (req, auth) => {
     try {
       const body = await request.json();
+      const validated = CreateMemorySchema.safeParse(body);
+      
+      if (!validated.success) {
+        return errorResponse(validated.error.errors[0].message, 400);
+      }
+      
       const namespace = body.namespace || auth.namespace;
       
       const memory = await prisma.memory.create({
@@ -90,9 +95,6 @@ export async function POST(request: NextRequest) {
       });
 
       // 记录审计日志
-      const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() 
-        || request.headers.get("x-real-ip") 
-        || "unknown";
       await logAudit(
         "create",
         "memory",
@@ -100,7 +102,7 @@ export async function POST(request: NextRequest) {
         namespace,
         undefined,
         auth.tokenId,
-        ipAddress,
+        getClientIP(request),
         { title: memory.title }
       );
 
@@ -117,6 +119,11 @@ export async function PUT(request: NextRequest) {
   return withWriteAuth(async (req, auth) => {
     try {
       const body = await request.json();
+      const validated = UpdateMemorySchema.safeParse(body);
+
+      if (!validated.success) {
+        return errorResponse(validated.error.errors[0].message, 400);
+      }
 
       if (body.id) {
         // 单个更新
@@ -131,9 +138,6 @@ export async function PUT(request: NextRequest) {
         });
 
         // 记录审计日志
-        const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() 
-          || request.headers.get("x-real-ip") 
-          || "unknown";
         await logAudit(
           "update",
           "memory",
@@ -141,7 +145,7 @@ export async function PUT(request: NextRequest) {
           memory.namespace,
           undefined,
           auth.tokenId,
-          ipAddress,
+          getClientIP(request),
           { updatedFields: Object.keys(body).filter(k => k !== "id") }
         );
 
@@ -177,9 +181,6 @@ export async function DELETE(request: NextRequest) {
       });
 
       // 记录审计日志
-      const ipAddress = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() 
-        || request.headers.get("x-real-ip") 
-        || "unknown";
       await logAudit(
         "delete",
         "memory",
@@ -187,7 +188,7 @@ export async function DELETE(request: NextRequest) {
         memory?.namespace,
         undefined,
         auth.tokenId,
-        ipAddress,
+        getClientIP(request),
         { title: memory?.title }
       );
 

@@ -6,21 +6,23 @@
 ## 功能清单
 
 ### Phase 1: Agent 注册表
-- [ ] `/api/agents` - Agent 注册与状态管理
-- [ ] Agent model: id, name, status, capabilities, lastSeen
+- [x] `/api/agents` - Agent 注册与状态管理
+- [x] Agent model: id, name, status, capabilities, lastSeen
 
 ### Phase 2: 任务分发系统
-- [ ] `/api/tasks` - 任务创建、分配、跟踪
-- [ ] Task model: id, title, assignee, status, result, createdAt
+- [x] `/api/tasks` - 任务创建、分配、跟踪
+- [x] Task model: id, title, assignee, status, result, createdAt
 
 ### Phase 3: 消息队列
-- [ ] `/api/messages` - Agent 间消息传递
-- [ ] Message model: id, from, to, content, read, createdAt
+- [x] `/api/messages` - Agent 间消息传递
+- [x] Message model: id, from, to, content, read, createdAt
+- [x] SSE 实时事件流
 
 ### Phase 4: 前端 UI
-- [ ] Agent 状态面板
-- [ ] 任务看板
-- [ ] 消息历史
+- [x] Agent 状态面板
+- [x] 任务看板
+- [x] 消息历史
+- [x] Namespace 切换
 
 ## 技术实现
 

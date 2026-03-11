@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { createHash } from "crypto";
 
 // 简单的 Token 验证函数
 async function validateToken(token: string): Promise<{ valid: boolean; namespace?: string; permissions?: string[] }> {
@@ -12,8 +11,9 @@ async function validateToken(token: string): Promise<{ valid: boolean; namespace
   });
 
   if (!apiToken) {
-    // 兼容：如果是默认的开发 Token，返回有效
-    if (token === "dev-token-for-testing") {
+    // 兼容：从环境变量读取 dev token
+    const devToken = process.env.API_TOKEN || process.env.NEXT_PUBLIC_API_TOKEN;
+    if (devToken && token === devToken) {
       return { valid: true, namespace: "default", permissions: ["read", "write", "admin"] };
     }
     return { valid: false };

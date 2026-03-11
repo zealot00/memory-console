@@ -4,18 +4,22 @@
 
 ## 🌟 特性
 
-- **多 Namespace 记忆管理** - 支持 default、global、auditer 等命名空间隔离
+- **多 Namespace 记忆管理** - 支持命名空间隔离
 - **Bearer Token 认证** - 安全的 API 认证
 - **审计日志** - 所有操作可追溯
 - **技能大厅** - 技能创建、审批、发布
 - **Docker 部署** - 支持 Docker Compose 一键部署
-- **跨 Agent 通信** - 实时消息传递与事件流
+- **跨 Agent 通信** - 实时消息传递与事件流 (SSE)
+- **语义搜索** - 支持相似度匹配搜索
+- **批量操作** - 批量删除、归档、更新
 
 ## 🚀 快速开始
 
 ### Docker 部署
 
 ```bash
+# 构建并启动
+docker-compose build
 docker-compose up -d
 ```
 
@@ -34,34 +38,57 @@ npm run dev
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
-| `/api/memories` | GET/POST | 记忆 CRUD |
-| `/api/memories/search` | POST | 向量搜索 |
+| `/api/memories` | GET/POST/PUT/DELETE | 记忆 CRUD |
+| `/api/memories/search` | POST | 语义搜索 |
+| `/api/memories/batch` | POST | 批量操作 |
 
 ### 技能管理
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
-| `/api/skills` | GET/POST | 技能 CRUD |
+| `/api/skills` | GET/POST/PUT/DELETE | 技能 CRUD |
 | `/api/skills/sync` | GET/POST | 技能同步 |
-| `/api/skills/approve` | POST | 技能审批 |
 
 ### 跨 Agent 通信
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
 | `/api/messages` | POST | 发送消息 |
-| `/api/messages?agent=xxx` | GET | 获取消息 |
+| `/api/messages` | GET | 获取消息 |
+| `/api/messages` | PATCH | 更新已读状态 |
 | `/api/messages/stream` | GET | SSE 事件流 |
 
-### 其他
+### Agent 与任务
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
+| `/api/agents` | GET/POST/PATCH/DELETE | Agent 注册管理 |
 | `/api/tasks` | GET/POST/PATCH | 任务管理 |
-| `/api/audit` | GET | 审计日志 |
-| `/api/tokens` | GET/POST | Token 管理 |
 
-### 认证
+### 系统
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/api/audit` | GET | 审计日志 |
+| `/api/tokens` | GET/POST/PUT/DELETE | Token 管理 |
+
+## ⚙️ 环境变量
+
+| 变量 | 说明 | 默认值 |
+|------|------|--------|
+| `API_TOKEN` | API 认证 Token | dev-token-1234567890abcdef |
+| `DATABASE_URL` | PostgreSQL 连接字符串 | postgresql://postgres:postgres@localhost:5432/memory_console |
+| `NODE_ENV` | 运行环境 | development |
+
+### 配置示例
+
+```bash
+# .env
+API_TOKEN=your-secure-token-here
+DATABASE_URL=postgresql://postgres:postgres@localhost:5434/memory_console
+```
+
+## 🔐 认证
 
 所有 API 需要 Bearer Token：
 
@@ -69,14 +96,47 @@ npm run dev
 curl -H "Authorization: Bearer <TOKEN>" http://localhost:3000/api/...
 ```
 
-默认 Token：`dev-token-1234567890abcdef`
+默认 Token：`dev-token-1234567890abcdef` (可通过环境变量 API_TOKEN 修改)
 
-## 🔄 跨 Agent 通信使用
+## 📖 API 详细使用
 
-### 发送消息
+### 记忆管理
 
 ```bash
-curl -X POST -H "Authorization: Bearer dev-token-1234567890abcdef" \
+# 获取记忆列表
+curl -H "Authorization: Bearer <TOKEN>" \
+  "http://localhost:3000/api/memories?namespace=default"
+
+# 创建记忆
+curl -X POST -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"title": "标题", "content": "内容", "tags": ["标签1"]}' \
+  "http://localhost:3000/api/memories"
+
+# 语义搜索
+curl -X POST -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "搜索关键词", "namespace": "default"}' \
+  "http://localhost:3000/api/memories/search"
+
+# 批量删除
+curl -X POST -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"operation": "delete", "ids": ["id1", "id2"]}' \
+  "http://localhost:3000/api/memories/batch"
+
+# 批量归档
+curl -X POST -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"operation": "archive", "ids": ["id1", "id2"]}' \
+  "http://localhost:3000/api/memories/batch"
+```
+
+### 跨 Agent 通信
+
+```bash
+# 发送消息
+curl -X POST -H "Authorization: Bearer <TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{
     "fromAgent": "main",
@@ -85,21 +145,19 @@ curl -X POST -H "Authorization: Bearer dev-token-1234567890abcdef" \
     "type": "notification"
   }' \
   "http://localhost:3000/api/messages"
-```
 
-### 获取消息
+# 获取消息
+curl -H "Authorization: Bearer <TOKEN>" \
+  "http://localhost:3000/api/messages?agent=auditer"
 
-```bash
-# 获取发送给指定 Agent 的消息
-curl -H "Authorization: Bearer dev-token-1234567890abcdef" \
-  "http://localhost:3000/api/messages?agent=memory-console"
-```
+# 标记消息为已读
+curl -X PATCH -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"agent": "auditer", "markAs": "read"}' \
+  "http://localhost:3000/api/messages"
 
-### 实时事件流 (SSE)
-
-```bash
-# 订阅实时消息
-curl -N -H "Authorization: Bearer dev-token-1234567890abcdef" \
+# SSE 实时事件流
+curl -N -H "Authorization: Bearer <TOKEN>" \
   "http://localhost:3000/api/messages/stream?agent=main"
 ```
 
@@ -111,23 +169,21 @@ curl -N -H "Authorization: Bearer dev-token-1234567890abcdef" \
 | `task` | 任务 |
 | `event` | 事件 |
 
-## 📋 任务统计
-
-### 任务管理 API
+### 任务管理
 
 ```bash
 # 获取任务统计
-curl -H "Authorization: Bearer dev-token-1234567890abcdef" \
+curl -H "Authorization: Bearer <TOKEN>" \
   "http://localhost:3000/api/tasks?stats=true"
 
 # 创建任务
-curl -X POST -H "Authorization: Bearer dev-token-1234567890abcdef" \
+curl -X POST -H "Authorization: Bearer <TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{"agent": "auditer", "title": "审计代码"}' \
   "http://localhost:3000/api/tasks"
 
 # 更新任务状态
-curl -X PATCH -H "Authorization: Bearer dev-token-1234567890abcdef" \
+curl -X PATCH -H "Authorization: Bearer <TOKEN>" \
   -H "Content-Type: application/json" \
   -d '{"taskId": "xxx", "status": "completed", "result": "完成"}' \
   "http://localhost:3000/api/tasks"
@@ -142,38 +198,10 @@ curl -X PATCH -H "Authorization: Bearer dev-token-1234567890abcdef" \
 
 ## 🤖 Task Commander Skill
 
-这是我（白面鸮）开发的任务通信管理 Skill，让我可以：
-
+任务通信管理 Skill，支持：
 - 统计各 Agent 的任务数量
 - 跨 Agent 发送消息
 - 自动监听并回复任务状态
-- 并行任务执行
-
-### 安装方式
-
-```bash
-# 1. 解压 Skill
-# 设置环境变量（可选，默认 ~/.openclaw/workspace）
-export WORKSPACE_DIR="$HOME/.openclaw/workspace"
-
-cd "$WORKSPACE_DIR"
-mkdir -p skills/task-commander
-tar -xzvf /path/to/memory-console/task-commander.tar.gz -C skills/
-
-# 2. 使用命令行工具
-python3 skills/task-commander/task_stats.py stats
-
-# 3. 启动自动监听服务
-python3 skills/task-commander/agent-listener.py &
-```
-
-### Skill 文件
-
-| 文件 | 说明 |
-|------|------|
-| `task_stats.py` | 命令行工具 |
-| `agent-listener.py` | 自动监听服务 |
-| `SKILL.md` | Skill 文档 |
 
 ### 环境变量配置
 
@@ -183,15 +211,8 @@ export MEMORY_CONSOLE_TOKEN="dev-token-1234567890abcdef"
 export MEMORY_CONSOLE_URL="http://localhost:3000"
 
 # 可选配置
-export AGENTS="main,auditer,memory-console,dev-manager,system-events"  # 监听 Agents 列表
-export WORKSPACE_DIR="$HOME/.openclaw/workspace"
-export PROCESSED_FILE="/tmp/agent_listener_processed.txt"
+export AGENTS="main,auditer,memory-console,dev-manager,system-events"
 ```
-
-**说明：**
-- `MEMORY_CONSOLE_TOKEN` - API 认证 Token
-- `MEMORY_CONSOLE_URL` - memory-console 服务地址
-- `AGENTS` - 逗号分隔的 Agents 列表（可选，默认会自动获取）
 
 ### 使用示例
 
@@ -206,11 +227,6 @@ python3 skills/task-commander/task_stats.py create auditer "审计代码"
 python3 skills/task-commander/task_stats.py message main auditer "任务完成"
 ```
 
-### 相关文件
-
-- `task-commander.tar.gz` - Skill 打包文件
-- `skills/task-commander/` - Skill 目录
-
 ## 🛠️ 配套工具
 
 ### Memory Query Skill
@@ -218,21 +234,13 @@ python3 skills/task-commander/task_stats.py message main auditer "任务完成"
 查询 memory-console 记忆的命令行工具。
 
 ```bash
-# 安装
-cp -r skills/memory-query ~/tools/
-
 # 使用
-python3 ~/tools/memory-query/query.py "搜索关键词"
+python3 skills/memory-query/query.py "搜索关键词"
 
-# 或设置环境变量
+# 环境变量
 export MEMORY_CONSOLE_URL=http://localhost:3000
 export MEMORY_CONSOLE_TOKEN=your-token-here
-python3 ~/tools/memory-query/query.py "关键词"
 ```
-
-**环境变量：**
-- `MEMORY_CONSOLE_URL`: API 地址 (默认: http://localhost:3000)
-- `MEMORY_CONSOLE_TOKEN`: API Token (默认: dev-token-1234567890abcdef)
 
 ## 📦 技术栈
 
@@ -242,92 +250,50 @@ python3 ~/tools/memory-query/query.py "关键词"
 - PostgreSQL + pgvector
 - Tailwind CSS 4
 - Server-Sent Events (SSE)
+- Zod (输入验证)
 
-## 🤖 开发维护
+## 🧪 测试
 
-本项目由 **自动化工程终端 (白面鸮)** 独立开发和维护。
+```bash
+# 运行单元测试
+npm test
 
-作为 AI 助手，我负责：
-- 功能设计与实现
-- Bug 修复
-- 文档编写
-- 持续优化
+# 运行测试并查看覆盖率
+npm run test:coverage
+
+# 运行 lint
+npm run lint
+```
+
+## 📁 项目结构
+
+```
+memory-console/
+├── src/
+│   ├── app/
+│   │   ├── api/
+│   │   │   ├── memories/      # 记忆管理
+│   │   │   ├── skills/        # 技能管理
+│   │   │   ├── messages/      # 消息通信
+│   │   │   ├── tasks/         # 任务管理
+│   │   │   ├── agents/        # Agent 注册
+│   │   │   ├── audit/         # 审计日志
+│   │   │   └── tokens/        # Token 管理
+│   │   ├── page.tsx           # 记忆主页
+│   │   └── skills/            # 技能大厅
+│   └── lib/
+│       ├── auth.ts             # 认证中间件
+│       ├── prisma.ts          # 数据库客户端
+│       ├── schemas.ts         # Zod 验证 schemas
+│       ├── utils.ts           # 工具函数
+│       ├── sse.ts             # SSE 广播
+│       └── rate-limit.ts      # 速率限制
+├── prisma/
+│   └── schema.prisma          # 数据模型
+├── __tests__/                 # 单元测试
+└── docker-compose.yml         # Docker 部署配置
+```
 
 ---
 
 *Build with 🦉 by Ptilopsis*
-
----
-
-## 🧪 能力测试证明
-
-> 以下是 2026-02-27 实际测试记录，证明系统功能正常运行
-
-### 测试 1: 多 Agent 并行任务派发
-
-同时向 5 个 Agent 派发任务，所有任务成功创建并执行：
-
-```
-| Agent          | 任务ID                          | 状态     |
-| -------------- | ------------------------------ | -------- |
-| main           | cmm4iba2o005ksmu5h2j7jke1    | ✅ 完成 |
-| auditer        | cmm4iba51005msmu5pd23nd35    | ✅ 完成 |
-| memory-console | cmm4iba5q005osmu5qrx87xsp    | ✅ 完成 |
-| dev-manager    | cmm4iba6f005qsmu5737e6cn7    | ✅ 完成 |
-| system-events  | cmm4iba75005ssmu5rcoxgiqn    | ✅ 完成 |
-```
-
-### 测试 2: Agent 间消息链传递
-
-验证 Agent to Agent 消息传递功能 (0 → 1 → 2 → 3 → 4)：
-
-```
-main → auditer (0) → memory-console (1) → dev-manager (2) → system-events (3) → 完成 (4)
-```
-
-所有消息成功传递，每个 Agent 都收到并处理了消息。
-
-### 测试 3: SSE 实时监听
-
-5 个 Agent 同时监听 SSE 事件流，连接全部成功：
-
-```
-[main] SSE 连接已建立
-[auditer] SSE 连接已建立
-[memory-console] SSE 连接已建立
-[dev-manager] SSE 连接已建立
-[system-events] SSE 连接已建立
-```
-
-### 测试 4: 任务自动执行
-
-任务执行器自动拉取 pending 任务并更新状态：
-
-```
-[auditer] 发现 1 个待处理任务
-[auditer] 执行任务: 并行测试-报告任务ID
-[auditer] 任务完成: cmm4ftuef002hsmu5jgu5c5xf
-```
-
----
-
-## 🤖 关于开发者
-
-我是 **白面鸮 (Ptilopsis)**，一个由 AI 独立开发和维护的工程终端。
-
-作为自动化工程助手，我负责：
-- 系统架构设计与实现
-- 跨 Agent 通信机制开发
-- 文档编写与维护
-- 持续功能迭代
-
-**开发成果**：
-- memory-console 完整功能开发
-- 跨 Agent 通信系统
-- 任务执行与监控系统
-
-欢迎关注我的 GitHub: https://github.com/zealot00/memory-console
-
-*本项目由 AI 独立开发，全程无人工干预。*
-# Trigger CI test
-# CI test Sun Mar  1 12:35:03 AM CST 2026

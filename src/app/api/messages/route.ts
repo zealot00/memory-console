@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
+import { broadcastToAgent } from '@/lib/sse';
+import { CreateMessageSchema } from '@/lib/schemas';
 
-const prisma = new PrismaClient();
-
-// 获取认证头
 function getAuthHeaders(request: NextRequest) {
   const authHeader = request.headers.get('Authorization');
   if (!authHeader?.startsWith('Bearer ')) {
@@ -12,28 +11,39 @@ function getAuthHeaders(request: NextRequest) {
   return authHeader.replace('Bearer ', '');
 }
 
-// 发送消息
+async function validateToken(token: string) {
+  const apiToken = await prisma.apiToken.findUnique({ where: { token } });
+  if (apiToken) return apiToken;
+  
+  const devToken = process.env.API_TOKEN || process.env.NEXT_PUBLIC_API_TOKEN;
+  if (devToken && token === devToken) {
+    return { id: 'dev', name: 'dev-token' };
+  }
+  return null;
+}
+
 export async function POST(request: NextRequest) {
   const token = getAuthHeaders(request);
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // 验证 token
-  const apiToken = await prisma.apiToken.findUnique({ where: { token } });
+  const apiToken = await validateToken(token);
   if (!apiToken) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }
 
   const body = await request.json();
-  const { fromAgent, toAgent, content, type = 'notification' } = body;
+  const validated = CreateMessageSchema.safeParse(body);
 
-  if (!fromAgent || !toAgent || !content) {
+  if (!validated.success) {
     return NextResponse.json(
-      { error: 'Missing required fields: fromAgent, toAgent, content' },
+      { error: validated.error.errors[0].message },
       { status: 400 }
     );
   }
+
+  const { fromAgent, toAgent, content, type = 'notification' } = body;
 
   const message = await prisma.message.create({
     data: {
@@ -45,7 +55,6 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  // 记录到审计日志
   await prisma.auditLog.create({
     data: {
       action: 'message_send',
@@ -56,17 +65,21 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  broadcastToAgent(toAgent, {
+    type: 'message',
+    data: message,
+  });
+
   return NextResponse.json(message);
 }
 
-// 获取消息 / 事件流
 export async function GET(request: NextRequest) {
   const token = getAuthHeaders(request);
   if (!token) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const apiToken = await prisma.apiToken.findUnique({ where: { token } });
+  const apiToken = await validateToken(token);
   if (!apiToken) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }
@@ -76,13 +89,11 @@ export async function GET(request: NextRequest) {
   const since = searchParams.get('since');
   const feed = searchParams.get('feed') === 'true';
 
-  let where: any = {};
+  const where: Record<string, unknown> = {};
 
   if (feed && since) {
-    // 事件流：获取指定时间后的消息
     where.createdAt = { gte: new Date(since) };
   } else if (agent) {
-    // 获取发送给特定 Agent 的消息
     where.toAgent = agent;
   }
 
@@ -98,5 +109,55 @@ export async function GET(request: NextRequest) {
   });
 }
 
-// 导出广播函数供其他模块使用
-// export { broadcastToAgent };
+export async function PATCH(request: NextRequest) {
+  const token = getAuthHeaders(request);
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const apiToken = await validateToken(token);
+  if (!apiToken) {
+    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+  }
+
+  const body = await request.json();
+  const { messageIds, agent, markAs } = body;
+
+  if (messageIds && Array.isArray(messageIds)) {
+    const updated = await prisma.message.updateMany({
+      where: {
+        id: { in: messageIds },
+      },
+      data: {
+        status: markAs || 'read',
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      updated: updated.count,
+    });
+  }
+
+  if (agent) {
+    const updated = await prisma.message.updateMany({
+      where: {
+        toAgent: agent,
+        status: 'unread',
+      },
+      data: {
+        status: markAs || 'read',
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      updated: updated.count,
+    });
+  }
+
+  return NextResponse.json(
+    { error: 'messageIds or agent is required' },
+    { status: 400 }
+  );
+}

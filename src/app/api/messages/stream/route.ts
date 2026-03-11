@@ -1,20 +1,20 @@
 import { NextRequest } from 'next/server';
-
-// 模拟 SSE 客户端连接 (内存存储，生产环境应使用 Redis)
-const clients = new Map<string, Set<ReadableStreamDefaultController>>();
+import { prisma } from '@/lib/prisma';
+import { addSSEClient, removeSSEClient } from '@/lib/sse';
 
 export async function GET(request: NextRequest) {
   const token = request.headers.get('Authorization')?.replace('Bearer ', '');
   if (!token) {
     return new Response('Unauthorized', { status: 401 });
   }
-
-  const { PrismaClient } = await import('@prisma/client');
-  const prisma = new PrismaClient();
   
   const apiToken = await prisma.apiToken.findUnique({ where: { token } });
   if (!apiToken) {
-    return new Response('Invalid token', { status: 401 });
+    // 兼容：从环境变量读取 dev token
+    const devToken = process.env.API_TOKEN || process.env.NEXT_PUBLIC_API_TOKEN;
+    if (!devToken || token !== devToken) {
+      return new Response('Invalid token', { status: 401 });
+    }
   }
 
   const { searchParams } = new URL(request.url);
@@ -26,10 +26,7 @@ export async function GET(request: NextRequest) {
 
   const stream = new ReadableStream({
     start(controller) {
-      if (!clients.has(agent)) {
-        clients.set(agent, new Set());
-      }
-      clients.get(agent)!.add(controller);
+      addSSEClient(agent, controller);
       
       controller.enqueue(new TextEncoder().encode(`data: {"type":"connected","agent":"${agent}"}\n\n`));
       
@@ -42,9 +39,7 @@ export async function GET(request: NextRequest) {
       }, 30000);
     },
     cancel(controller) {
-      if (clients.has(agent)) {
-        clients.get(agent)!.delete(controller);
-      }
+      removeSSEClient(agent, controller);
     },
   });
 

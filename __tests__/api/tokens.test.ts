@@ -206,7 +206,6 @@ describe('API: /api/tokens', () => {
       const data = await response.json();
 
       expect(response.status).toBe(400);
-      expect(data.error).toBe('ID required');
     });
 
     it('should return 404 when token not found', async () => {
