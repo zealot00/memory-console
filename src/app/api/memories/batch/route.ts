@@ -99,14 +99,24 @@ export async function POST(request: NextRequest) {
             );
           }
 
-          const updates = await Promise.all(
-            ids.map(id =>
-              prisma.memory.update({
+          const updates: unknown[] = [];
+          const failed: string[] = [];
+          
+          for (const id of ids) {
+            try {
+              const updated = await prisma.memory.update({
                 where: { id, namespace: auth.namespace },
                 data: updateData,
-              })
-            )
-          );
+              });
+              updates.push(updated);
+            } catch (error) {
+              if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
+                failed.push(id);
+              } else {
+                throw error;
+              }
+            }
+          }
 
           await logAudit(
             "update",
@@ -116,10 +126,10 @@ export async function POST(request: NextRequest) {
             undefined,
             auth.tokenId,
             getClientIP(request),
-            { operation: "batch_update", count: updates.length }
+            { operation: "batch_update", success: updates.length, failed: failed.length }
           );
 
-          results = updates;
+          results = [{ success: updates, failed }];
           break;
         }
 

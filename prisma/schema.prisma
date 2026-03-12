@@ -97,18 +97,20 @@ model Message {
 }
 
 model Task {
-  id          String   @id @default(cuid())
-  agent       String
-  title       String
-  description String?
-  status      String   @default("pending") // pending|in_progress|completed|failed
-  result      String?  @db.Text
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  completedAt DateTime?
+  id           String    @id @default(cuid())
+  agent        String
+  title        String
+  description  String?
+  status       String    @default("pending") // pending|in_progress|completed|failed
+  result       String?   @db.Text
+  namespace    String    @default("default")
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  completedAt  DateTime?
 
   @@index([agent])
   @@index([status])
+  @@index([namespace])
 }
 
 // Agent 注册表模型

@@ -13,7 +13,7 @@ async function validateToken(token: string) {
   
   const devToken = process.env.API_TOKEN || process.env.NEXT_PUBLIC_API_TOKEN;
   if (devToken && token === devToken) {
-    return { id: 'dev', name: 'dev-token' };
+    return { id: 'dev', name: 'dev-token', namespace: 'default' };
   }
   return null;
 }
@@ -39,7 +39,13 @@ export async function POST(request: NextRequest) {
   const { agent, title, description } = body;
 
   const task = await prisma.task.create({
-    data: { agent, title, description, status: 'pending' },
+    data: { 
+      agent, 
+      title, 
+      description, 
+      status: 'pending',
+      namespace: apiToken.namespace || 'default',
+    },
   });
 
   await prisma.auditLog.create({
@@ -47,7 +53,7 @@ export async function POST(request: NextRequest) {
       action: 'task_create',
       entityType: 'Task',
       entityId: task.id,
-      details: { agent, title },
+      details: { agent, title, namespace: task.namespace },
       tokenId: apiToken.id,
     },
   });
@@ -70,7 +76,9 @@ export async function GET(request: NextRequest) {
   const agent = searchParams.get('agent');
   const statsOnly = searchParams.get('stats') === 'true';
 
-  const where = agent ? { agent } : {};
+  const namespace = apiToken?.namespace || 'default';
+  const where: Record<string, unknown> = { namespace };
+  if (agent) where.agent = agent;
 
   if (statsOnly) {
     const total = await prisma.task.count({ where });
@@ -124,7 +132,7 @@ export async function PATCH(request: NextRequest) {
   if (status === 'completed') updateData.completedAt = new Date();
 
   const task = await prisma.task.update({
-    where: { id: taskId },
+    where: { id: taskId, namespace: apiToken.namespace || 'default' },
     data: updateData,
   });
 

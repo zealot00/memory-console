@@ -7,15 +7,19 @@ function getAuthToken(request: NextRequest) {
   return request.headers.get('Authorization')?.replace('Bearer ', '');
 }
 
-async function validateToken(token: string) {
+async function validateTokenWithNamespace(token: string) {
   const apiToken = await prisma.apiToken.findUnique({ where: { token } });
   if (apiToken) return apiToken;
   
   const devToken = process.env.API_TOKEN || process.env.NEXT_PUBLIC_API_TOKEN;
   if (devToken && token === devToken) {
-    return { id: 'dev', name: 'dev-token' };
+    return { id: 'dev', name: 'dev-token', namespace: 'default' };
   }
   return null;
+}
+
+function getTokenNamespace(apiToken: { namespace?: string } | null): string {
+  return apiToken?.namespace || 'default';
 }
 
 export async function GET(request: NextRequest) {
@@ -24,19 +28,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const apiToken = await validateToken(token);
+  const apiToken = await validateTokenWithNamespace(token);
   if (!apiToken) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get('status');
-  const namespace = searchParams.get('namespace');
   const statsOnly = searchParams.get('stats') === 'true';
 
-  const where: Record<string, unknown> = {};
+  const namespace = getTokenNamespace(apiToken);
+  
+  const where: Record<string, unknown> = { namespace };
   if (status) where.status = status;
-  if (namespace) where.namespace = namespace;
 
   if (statsOnly) {
     const total = await prisma.agent.count({ where });
@@ -64,7 +68,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const apiToken = await validateToken(token);
+  const apiToken = await validateTokenWithNamespace(token);
   if (!apiToken) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }
@@ -76,12 +80,13 @@ export async function POST(request: NextRequest) {
     return errorResponse(validated.error.errors[0].message, 400);
   }
 
-  const { name, displayName, capabilities, metadata, namespace = 'default' } = body;
+  const { name, displayName, capabilities, metadata } = body;
+  const namespace = getTokenNamespace(apiToken);
 
-  const existing = await prisma.agent.findUnique({ where: { name } });
+  const existing = await prisma.agent.findUnique({ where: { name, namespace } });
   if (existing) {
     const agent = await prisma.agent.update({
-      where: { name },
+      where: { name, namespace },
       data: {
         displayName: displayName || existing.displayName,
         capabilities: capabilities || existing.capabilities,
@@ -136,7 +141,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const apiToken = await validateToken(token);
+  const apiToken = await validateTokenWithNamespace(token);
   if (!apiToken) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }
@@ -156,7 +161,10 @@ export async function PATCH(request: NextRequest) {
   if (metadata) updateData.metadata = metadata;
   if (status === 'online') updateData.lastSeen = new Date();
 
-  const where = agentId ? { id: agentId } : { name: name! };
+  const namespace = getTokenNamespace(apiToken);
+  const where = agentId 
+    ? { id: agentId, namespace } 
+    : { name: name!, namespace };
 
   const agent = await prisma.agent.update({
     where,
@@ -183,7 +191,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const apiToken = await validateToken(token);
+  const apiToken = await validateTokenWithNamespace(token);
   if (!apiToken) {
     return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
   }
@@ -196,7 +204,8 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Missing required field: agentId or name' }, { status: 400 });
   }
 
-  const where = agentId ? { id: agentId } : { name: name! };
+  const namespace = getTokenNamespace(apiToken);
+  const where = agentId ? { id: agentId, namespace } : { name: name!, namespace };
 
   const agent = await prisma.agent.delete({
     where,
