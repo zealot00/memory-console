@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAdminAuth, logAudit } from "@/lib/auth";
-import { getClientIP, errorResponse } from "@/lib/utils";
+import { getClientIP, errorResponse, validationError } from "@/lib/utils";
 import { CreateTokenSchema, UpdateTokenSchema } from "@/lib/schemas";
 import { randomBytes } from "crypto";
 
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       const validated = CreateTokenSchema.safeParse(body);
 
       if (!validated.success) {
-        return errorResponse(validated.error.errors[0].message, 400);
+        return validationError(validated.error);
       }
 
       const namespace = body.namespace || auth.namespace;
@@ -95,7 +95,7 @@ export async function PUT(request: NextRequest) {
       const validated = UpdateTokenSchema.safeParse(body);
 
       if (!validated.success) {
-        return errorResponse(validated.error.errors[0].message, 400);
+        return validationError(validated.error);
       }
 
       const apiToken = await prisma.apiToken.update({

@@ -86,6 +86,11 @@ jest.mock('@/lib/utils', () => ({
   handleApiError: jest.fn().mockImplementation((error: unknown, message = 'Internal Server Error') => {
     return { json: () => ({ error: message }), status: 500 };
   }),
+  validationError: jest.fn().mockImplementation((error: any) => {
+    const firstError = error?.errors?.[0];
+    const message = firstError ? `${firstError.path?.join('.')}: ${firstError.message}` : 'Validation failed';
+    return { json: () => ({ error: message }), status: 400 };
+  }),
 }));
 
 // 设置测试环境变量

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { broadcastToAgent } from '@/lib/sse';
 import { CreateMessageSchema } from '@/lib/schemas';
+import { validationError } from '@/lib/utils';
 
 function getAuthHeaders(request: NextRequest) {
   const authHeader = request.headers.get('Authorization');
@@ -37,10 +38,7 @@ export async function POST(request: NextRequest) {
   const validated = CreateMessageSchema.safeParse(body);
 
   if (!validated.success) {
-    return NextResponse.json(
-      { error: validated.error.errors[0].message },
-      { status: 400 }
-    );
+    return validationError(validated.error);
   }
 
   const { fromAgent, toAgent, content, type = 'notification' } = body;

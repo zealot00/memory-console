@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withReadAuth, withWriteAuth, logAudit } from "@/lib/auth";
-import { getClientIP, errorResponse } from "@/lib/utils";
+import { getClientIP, errorResponse, validationError } from "@/lib/utils";
 import { CreateMemorySchema, UpdateMemorySchema } from "@/lib/schemas";
 
 // GET /api/memories - 获取所有记忆（支持分页和过滤）
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
       const validated = CreateMemorySchema.safeParse(body);
       
       if (!validated.success) {
-        return errorResponse(validated.error.errors[0].message, 400);
+        return validationError(validated.error);
       }
       
       const namespace = body.namespace || auth.namespace;
@@ -122,7 +122,7 @@ export async function PUT(request: NextRequest) {
       const validated = UpdateMemorySchema.safeParse(body);
 
       if (!validated.success) {
-        return errorResponse(validated.error.errors[0].message, 400);
+        return validationError(validated.error);
       }
 
       if (body.id) {

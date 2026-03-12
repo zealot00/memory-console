@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withReadAuth, withWriteAuth, withAdminAuth, logAudit } from "@/lib/auth";
-import { getClientIP, errorResponse } from "@/lib/utils";
+import { getClientIP, errorResponse, validationError } from "@/lib/utils";
 import { CreateSkillSchema, UpdateSkillSchema } from "@/lib/schemas";
 
 // GET /api/skills - 获取技能列表
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       const validated = CreateSkillSchema.safeParse(body);
 
       if (!validated.success) {
-        return errorResponse(validated.error.errors[0].message, 400);
+        return validationError(validated.error);
       }
 
       const skill = await prisma.skill.create({
@@ -114,7 +114,7 @@ export async function PUT(request: NextRequest) {
       const validated = UpdateSkillSchema.safeParse(body);
 
       if (!validated.success) {
-        return errorResponse(validated.error.errors[0].message, 400);
+        return validationError(validated.error);
       }
 
       // 获取原技能状态

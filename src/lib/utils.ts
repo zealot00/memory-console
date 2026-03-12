@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { ZodError } from "zod";
 
 export function getClientIP(request: NextRequest): string {
   return (
@@ -19,4 +20,13 @@ export function errorResponse(message: string, status: number): NextResponse {
 export function handleApiError(error: unknown, defaultMessage = "Internal Server Error"): NextResponse {
   console.error("API Error:", error);
   return errorResponse(defaultMessage, 500);
+}
+
+export function validationError(err: ZodError): NextResponse {
+  const firstError = err.errors[0];
+  if (!firstError) {
+    return errorResponse("Validation failed", 400);
+  }
+  const path = firstError.path.join(".");
+  return errorResponse(`${path ? path + ": " : ""}${firstError.message}`, 400);
 }

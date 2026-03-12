@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getClientIP, errorResponse } from '@/lib/utils';
+import { getClientIP, errorResponse, validationError } from '@/lib/utils';
 import { CreateAgentSchema, UpdateAgentSchema } from '@/lib/schemas';
 
 function getAuthToken(request: NextRequest) {
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
   const validated = CreateAgentSchema.safeParse(body);
 
   if (!validated.success) {
-    return errorResponse(validated.error.errors[0].message, 400);
+    return validationError(validated.error);
   }
 
   const { name, displayName, capabilities, metadata } = body;
@@ -150,7 +150,7 @@ export async function PATCH(request: NextRequest) {
   const validated = UpdateAgentSchema.safeParse(body);
 
   if (!validated.success) {
-    return errorResponse(validated.error.errors[0].message, 400);
+    return validationError(validated.error);
   }
 
   const { agentId, name, status, capabilities, metadata } = body;
