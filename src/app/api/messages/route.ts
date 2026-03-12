@@ -17,7 +17,7 @@ async function validateToken(token: string) {
   
   const devToken = process.env.API_TOKEN || process.env.NEXT_PUBLIC_API_TOKEN;
   if (devToken && token === devToken) {
-    return { id: 'dev', name: 'dev-token' };
+    return { id: 'dev', name: 'dev-token', namespace: 'default' };
   }
   return null;
 }
@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { fromAgent, toAgent, content, type = 'notification' } = body;
+  const namespace = apiToken?.namespace || 'default';
 
   const message = await prisma.message.create({
     data: {
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
       content,
       type,
       status: 'unread',
+      namespace,
     },
   });
 
@@ -89,7 +91,8 @@ export async function GET(request: NextRequest) {
   const since = searchParams.get('since');
   const feed = searchParams.get('feed') === 'true';
 
-  const where: Record<string, unknown> = {};
+  const namespace = apiToken?.namespace || 'default';
+  const where: Record<string, unknown> = { namespace };
 
   if (feed && since) {
     where.createdAt = { gte: new Date(since) };

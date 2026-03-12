@@ -90,6 +90,7 @@ export async function GET(request: NextRequest) {
     const byAgent = await prisma.task.groupBy({
       by: ['agent', 'status'],
       _count: true,
+      where: { namespace },
     });
 
     return NextResponse.json({

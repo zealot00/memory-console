@@ -83,10 +83,10 @@ export async function POST(request: NextRequest) {
   const { name, displayName, capabilities, metadata } = body;
   const namespace = getTokenNamespace(apiToken);
 
-  const existing = await prisma.agent.findUnique({ where: { name, namespace } });
+  const existing = await prisma.agent.findUnique({ where: { name_namespace: { name, namespace } } });
   if (existing) {
     const agent = await prisma.agent.update({
-      where: { name, namespace },
+      where: { name_namespace: { name, namespace } },
       data: {
         displayName: displayName || existing.displayName,
         capabilities: capabilities || existing.capabilities,
@@ -164,7 +164,7 @@ export async function PATCH(request: NextRequest) {
   const namespace = getTokenNamespace(apiToken);
   const where = agentId 
     ? { id: agentId, namespace } 
-    : { name: name!, namespace };
+    : { name_namespace: { name: name!, namespace } };
 
   const agent = await prisma.agent.update({
     where,
@@ -205,7 +205,9 @@ export async function DELETE(request: NextRequest) {
   }
 
   const namespace = getTokenNamespace(apiToken);
-  const where = agentId ? { id: agentId, namespace } : { name: name!, namespace };
+  const where = agentId 
+    ? { id: agentId, namespace } 
+    : { name_namespace: { name: name!, namespace } };
 
   const agent = await prisma.agent.delete({
     where,

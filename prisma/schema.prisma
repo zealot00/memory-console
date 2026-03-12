@@ -89,11 +89,13 @@ model Message {
   content   String   @db.Text
   type      String   @default("notification") // task|notification|event
   status    String   @default("unread") // unread|read
+  namespace String   @default("default")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([toAgent])
   @@index([createdAt])
+  @@index([namespace])
 }
 
 model Task {
@@ -116,7 +118,7 @@ model Task {
 // Agent 注册表模型
 model Agent {
   id           String   @id @default(cuid())
-  name         String   @unique
+  name         String
   displayName  String?
   status       String   @default("offline") // online|offline|busy
   capabilities Json?    // Agent 能力列表
@@ -126,6 +128,7 @@ model Agent {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  @@unique([name, namespace])
   @@index([status])
   @@index([namespace])
   @@index([lastSeen])
