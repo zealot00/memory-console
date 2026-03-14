@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withReadAuth, withWriteAuth, logAudit } from "@/lib/auth";
 import { getClientIP, errorResponse, validationError } from "@/lib/utils";
+import { generateEmbedding } from "@/lib/embedding";
 import { CreateMemorySchema, UpdateMemorySchema } from "@/lib/schemas";
 
 // GET /api/memories - 获取所有记忆（支持分页和过滤）
@@ -82,6 +83,15 @@ export async function POST(request: NextRequest) {
       
       const namespace = body.namespace || auth.namespace;
       
+      // 生成 embedding
+      let embedding: number[] = [];
+      try {
+        const textToEmbed = `${body.title} ${body.content} ${(body.tags || []).join(' ')}`;
+        embedding = await generateEmbedding(textToEmbed);
+      } catch (error) {
+        console.error('Failed to generate embedding:', error);
+      }
+      
       const memory = await prisma.memory.create({
         data: {
           title: body.title,
@@ -91,6 +101,7 @@ export async function POST(request: NextRequest) {
           status: "active",
           namespace,
           tags: body.tags || [],
+          embedding,
         },
       });
 
