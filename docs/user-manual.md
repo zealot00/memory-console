@@ -684,6 +684,9 @@ const memories = await client.getMemories({ namespace: 'default', page: '1' });
 | DATABASE_URL | 是 | PostgreSQL 连接字符串 | - |
 | API_TOKEN | 否 | API 认证 Token | dev-token-1234567890abcdef |
 | NODE_ENV | 否 | 运行环境 | development |
+| OPENAI_API_KEY | 否* | OpenAI API Key（向量搜索必需） | - |
+
+> **注意**：启用向量搜索功能需要配置 `OPENAI_API_KEY` 环境变量。
 
 ### 数据库 Schema
 
