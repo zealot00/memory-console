@@ -28,6 +28,11 @@ jest.mock('@/lib/auth', () => ({
   logAudit: jest.fn().mockResolvedValue({}),
 }));
 
+jest.mock('@/lib/embedding', () => ({
+  generateEmbedding: jest.fn().mockResolvedValue([0.1, 0.2, 0.3]),
+  cosineSimilarity: jest.fn().mockReturnValue(0.8),
+}));
+
 describe('API: /api/memories/search - Semantic Search', () => {
   beforeEach(() => {
     jest.clearAllMocks();
