@@ -14,6 +14,7 @@ services:
       - API_TOKEN=${API_TOKEN:-dev-token-1234567890abcdef}
       - NEXT_PUBLIC_API_TOKEN=${API_TOKEN:-dev-token-1234567890abcdef}
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/memory_console
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
     depends_on:
       db:
         condition: service_healthy
