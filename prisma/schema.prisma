@@ -21,6 +21,7 @@ model Memory {
   status      String   @default("active") // "active" | "archived" | "blocked"
   namespace   String   @default("default") // 命名空间隔离
   tags        String[] @default([])
+  embedding   Float[]  @default([]) // vector embedding for similarity search
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
