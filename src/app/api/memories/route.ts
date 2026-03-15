@@ -137,15 +137,26 @@ export async function PUT(request: NextRequest) {
       }
 
       if (body.id) {
-        // 单个更新
+        const needsEmbedding = !!(body.title || body.content);
+        const textToEmbed = (body.title || "") + " " + (body.content || "");
+        
+        const updateData: Record<string, unknown> = {};
+        if (body.title) updateData.title = body.title;
+        if (body.content) updateData.content = body.content;
+        if (body.tags) updateData.tags = body.tags;
+        if (body.status) updateData.status = body.status;
+
+        if (needsEmbedding && textToEmbed.trim()) {
+          try {
+            updateData.embedding = await generateEmbedding(textToEmbed.trim());
+          } catch (embedError) {
+            console.error("Failed to generate embedding on update:", embedError);
+          }
+        }
+
         const memory = await prisma.memory.update({
           where: { id: body.id },
-          data: {
-            ...(body.title && { title: body.title }),
-            ...(body.content && { content: body.content }),
-            ...(body.tags && { tags: body.tags }),
-            ...(body.status && { status: body.status }),
-          },
+          data: updateData,
         });
 
         // 记录审计日志

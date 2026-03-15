@@ -25,6 +25,8 @@ services:
         echo 'Waiting for database...' &&
         sleep 5 &&
         HOME=/tmp npm_config_cache=/tmp npx prisma@5.22.0 db push --accept-data-loss --skip-generate &&
+        echo 'Running vector index migration...' &&
+        HOME=/tmp npx prisma@5.22.0 migrate deploy --skip-generate || true &&
         echo 'Starting application...' &&
         node server.js
       "
