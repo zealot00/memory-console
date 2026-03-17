@@ -15,6 +15,8 @@ services:
       - NEXT_PUBLIC_API_TOKEN=${API_TOKEN:-dev-token-1234567890abcdef}
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/memory_console
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-bge-m3}
     depends_on:
       db:
         condition: service_healthy
@@ -30,6 +32,8 @@ services:
         echo 'Starting application...' &&
         node server.js
       "
+    networks:
+      - memory-network
 
   db:
     image: pgvector/pgvector:pg16
@@ -51,7 +55,32 @@ services:
     command: >
       postgres -c 'shared_buffers=256MB'
       -c 'max_connections=200'
+    networks:
+      - memory-network
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: memory-console-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    networks:
+      - memory-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+
+networks:
+  memory-network:
+    driver: bridge
 
 volumes:
   postgres-data:
+    driver: local
+  ollama-data:
     driver: local

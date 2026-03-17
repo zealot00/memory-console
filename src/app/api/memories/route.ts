@@ -137,7 +137,7 @@ export async function PUT(request: NextRequest) {
       }
 
       if (body.id) {
-        const needsEmbedding = !!(body.title || body.content);
+        const needsEmbedding = !!(body.title || body.content || body.regenerateEmbedding);
         const textToEmbed = (body.title || "") + " " + (body.content || "");
         
         const updateData: Record<string, unknown> = {};
@@ -146,6 +146,7 @@ export async function PUT(request: NextRequest) {
         if (body.tags) updateData.tags = body.tags;
         if (body.status) updateData.status = body.status;
 
+        // 支持强制重新生成 embedding
         if (needsEmbedding && textToEmbed.trim()) {
           try {
             updateData.embedding = await generateEmbedding(textToEmbed.trim());

@@ -1,5 +1,5 @@
 const OPENAI_MODEL = 'text-embedding-3-small';
-const OLLAMA_MODEL = 'nomic-embed-text';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'nomic-embed-text';
 
 export type EmbeddingProvider = 'openai' | 'ollama';
 
